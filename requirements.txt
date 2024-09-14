@@ -1,0 +1,8 @@
+-e .
+mypy
+notebook
+numpy
+pandas
+pre-commit
+pytest
+ruff
