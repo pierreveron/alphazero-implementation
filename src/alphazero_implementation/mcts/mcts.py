@@ -1,20 +1,15 @@
 import math
-from typing import List, Optional, Protocol
+
+from alphazero_implementation.games.state import GameState
+from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.random_model import RandomModel
 
 
-class GameState(Protocol):
-    def find_random_child(self) -> "GameState": ...
-
-    def is_terminal(self) -> bool: ...
-
-    def reward(self) -> float: ...
-
-
-class Node:
-    def __init__(self, state: GameState, parent: Optional["Node"] = None):
+class TreeNode:
+    def __init__(self, state: GameState, parent: "TreeNode | None" = None):
         self.state: GameState = state
-        self.parent: Optional["Node"] = parent
-        self.children: List["Node"] = []
+        self.parent: TreeNode | None = parent
+        self.children: list[TreeNode] = []
         self.visits: int = 0
         self.value: float = 0
 
@@ -33,7 +28,11 @@ class MCTS:
     gradually building a tree of possible game states and their estimated values.
     """
 
-    def __init__(self, exploration_weight: float = 1.4):
+    def __init__(
+        self,
+        exploration_weight: float = 1.4,
+        simulation_model: Model = RandomModel(),
+    ):
         """
         Initialize the MCTS object.
 
@@ -41,29 +40,37 @@ class MCTS:
             exploration_weight (float): The exploration weight for the UCT formula.
         """
         self.exploration_weight: float = exploration_weight
+        self.simulation_model: Model = simulation_model
 
-    def select(self, node: Node) -> Node:
+    def select(self, node: TreeNode) -> TreeNode:
         """
         Step 1: Selection - Select a child node using the UCT score.
 
-        If the node has no children, expand it. Otherwise, choose the child
+        If the node has no children, attempt to expand it. If expansion is not possible
+        (all actions explored), return the node itself. Otherwise, choose the child
         with the highest UCT score.
 
         Args:
             node (Node): The current node.
 
         Returns:
-            Node: The selected child node.
+            Node: The selected child node or the input node if expansion is not possible.
         """
-        if not node.children:
-            return self.expand(node)
-        return max(node.children, key=self._uct_score)
+        while not node.state.is_terminal():
+            if not node.children:
+                try:
+                    return self.expand(node)
+                except ValueError:
+                    # All actions have been explored, return this node
+                    return node
+            node = max(node.children, key=self._uct_score)
+        return node
 
-    def expand(self, node: Node) -> Node:
+    def expand(self, node: TreeNode) -> TreeNode:
         """
         Step 2: Expansion - Expand the given node by adding a new child.
 
-        Creates a new child node with a random untried state.
+        Creates a new child node for an unexplored action.
 
         Args:
             node (Node): The node to expand.
@@ -71,15 +78,19 @@ class MCTS:
         Returns:
             Node: The newly created child node.
         """
-        tried_children = {child.state for child in node.children}
-        new_state = node.state.find_random_child()
-        while new_state in tried_children:
-            new_state = node.state.find_random_child()
-        child = Node(new_state, parent=node)
+        unexplored_actions = set(node.state.legal_actions) - {
+            child.state.last_action for child in node.children
+        }
+        if not unexplored_actions:
+            raise ValueError("All actions have been explored")
+
+        action = unexplored_actions.pop()
+        new_state = node.state.play(action)
+        child = TreeNode(new_state, parent=node)
         node.children.append(child)
         return child
 
-    def simulate(self, node: Node) -> float:
+    def simulate(self, node: TreeNode) -> float:
         """
         Step 3: Simulation - Simulate a random playout from the given node.
 
@@ -91,12 +102,13 @@ class MCTS:
         Returns:
             float: The reward value of the terminal state.
         """
-        inplay = node.state
-        while not inplay.is_terminal():
-            inplay = inplay.find_random_child()
-        return inplay.reward()
+        current_state = node.state
+        while not current_state.is_terminal():
+            action = self.simulation_model.predict(current_state)
+            current_state = current_state.play(action)
+        return current_state.reward()
 
-    def backpropagate(self, node: Node | None, reward: float) -> None:
+    def backpropagate(self, node: TreeNode | None, reward: float) -> None:
         """
         Step 4: Backpropagation - Backpropagate the reward through the tree.
 
@@ -111,7 +123,7 @@ class MCTS:
             node.value += reward
             node = node.parent
 
-    def _uct_score(self, child: Node) -> float:
+    def _uct_score(self, child: TreeNode) -> float:
         """
         Calculate the UCT score for a child node.
 
@@ -130,22 +142,23 @@ class MCTS:
             math.log(parent_visits) / child.visits
         )
 
-    def search(self, initial_state: GameState, n_simulations: int) -> Node:
+    def search(self, initial_state: GameState, n_simulations: int) -> TreeNode:
         """
         Perform the MCTS search from the initial state.
 
         Runs the specified number of simulations and returns the best child of the root.
 
         Args:
-            initial_state (GameState): The starting game state.
+            initial_state (State): The starting game state.
             n_simulations (int): The number of simulations to run.
 
         Returns:
             Node: The best child node of the root (best next move).
         """
-        root = Node(initial_state)
+        root = TreeNode(initial_state)
         for _ in range(n_simulations):
             leaf = self.select(root)
-            reward = self.simulate(leaf)
-            self.backpropagate(leaf, reward)
-        return max(root.children, key=lambda c: c.visits)
+            if not leaf.state.is_terminal():
+                reward = self.simulate(leaf)
+                self.backpropagate(leaf, reward)
+        return max(root.children, key=lambda c: c.visits) if root.children else root

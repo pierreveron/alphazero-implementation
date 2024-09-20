@@ -1,13 +1,21 @@
+from typing import Protocol
+
+
 class Action:
     def __init__(self):
         pass
 
 
-class State:
-    actions: list[Action]
+class GameState(Protocol):
+    legal_actions: set[Action]
+    last_action: Action | None
 
     def __init__(self):
-        self.actions = []
+        self.legal_actions = set()
+        self.last_action = None
 
-    def add_action(self, action: Action):
-        self.actions.append(action)
+    def is_terminal(self) -> bool: ...
+
+    def reward(self) -> float: ...
+
+    def play(self, action: Action) -> "GameState": ...
