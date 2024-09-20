@@ -30,6 +30,7 @@ class MCTS:
 
     def __init__(
         self,
+        *,
         exploration_weight: float = 1.4,
         simulation_model: Model = RandomModel(),
     ):
@@ -104,7 +105,7 @@ class MCTS:
         """
         current_state = node.state
         while not current_state.is_terminal():
-            action = self.simulation_model.predict(current_state)
+            action, _ = self.simulation_model.predict(current_state)
             current_state = current_state.play(action)
         return current_state.reward()
 

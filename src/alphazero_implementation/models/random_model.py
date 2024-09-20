@@ -12,5 +12,5 @@ class RandomModel(Model):
     def __init__(self):
         pass
 
-    def predict(self, state: GameState) -> Action:
-        return random.choice(list(state.legal_actions))
+    def predict(self, state: GameState) -> tuple[Action, float]:
+        return random.choice(list(state.legal_actions)), 0

@@ -9,7 +9,7 @@ class Model(ABC):
     """
 
     @abstractmethod
-    def predict(self, state: GameState) -> Action:
+    def predict(self, state: GameState) -> tuple[Action, float]:
         """
         Predicts the next action to take in the game given the current state.
         """

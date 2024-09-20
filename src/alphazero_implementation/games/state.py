@@ -1,21 +1,37 @@
-from typing import Protocol
+from abc import ABC, abstractmethod
+
+import numpy as np
+from numpy.typing import NDArray
 
 
 class Action:
+    def __init__(self, index: int):
+        self.index = index
+
+    def __hash__(self) -> int:
+        return hash(self.index)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Action) and self.index == other.index
+
+
+class GameState(ABC):
     def __init__(self):
+        self.legal_actions: set[Action] = set()
+        self.last_action: Action | None = None
+
+    @abstractmethod
+    def is_terminal(self) -> bool:
         pass
 
+    @abstractmethod
+    def reward(self) -> float:
+        pass
 
-class GameState(Protocol):
-    legal_actions: set[Action]
-    last_action: Action | None
+    @abstractmethod
+    def play(self, action: Action) -> "GameState":
+        pass
 
-    def __init__(self):
-        self.legal_actions = set()
-        self.last_action = None
-
-    def is_terminal(self) -> bool: ...
-
-    def reward(self) -> float: ...
-
-    def play(self, action: Action) -> "GameState": ...
+    @abstractmethod
+    def to_input(self) -> NDArray[np.float32]:
+        pass
