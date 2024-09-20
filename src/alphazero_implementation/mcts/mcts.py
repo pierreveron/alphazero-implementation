@@ -143,21 +143,21 @@ class MCTS:
             math.log(parent_visits) / child.visits
         )
 
-    def search(self, initial_state: GameState, n_simulations: int) -> TreeNode:
+    def search(self, initial_state: GameState, num_iterations: int = 1000) -> TreeNode:
         """
         Perform the MCTS search from the initial state.
 
-        Runs the specified number of simulations and returns the best child of the root.
+        Runs the specified number of iterations and returns the best child of the root.
 
         Args:
             initial_state (State): The starting game state.
-            n_simulations (int): The number of simulations to run.
+            num_iterations (int): The number of iterations to perform for each move starting from the root
 
         Returns:
             Node: The best child node of the root (best next move).
         """
         root = TreeNode(initial_state)
-        for _ in range(n_simulations):
+        for _ in range(num_iterations):
             leaf = self.select(root)
             if not leaf.state.is_terminal():
                 reward = self.simulate(leaf)
