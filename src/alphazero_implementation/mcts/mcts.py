@@ -5,11 +5,26 @@ from alphazero_implementation.models.model import Model
 from alphazero_implementation.models.random_model import RandomModel
 
 
-class TreeNode:
-    def __init__(self, state: GameState, parent: "TreeNode | None" = None):
+class MCTSNode:
+    """
+    Represents a node in the Monte Carlo Tree Search.
+
+    This class encapsulates the state and statistics of a node in the MCTS tree.
+    Each node contains information about the game state it represents, its parent node,
+    child nodes, visit count, and accumulated value.
+
+    Attributes:
+        state (GameState): The game state represented by this node.
+        parent (MCTSNode | None): The parent node in the tree, or None if this is the root.
+        children (list[MCTSNode]): List of child nodes.
+        visits (int): Number of times this node has been visited during the search.
+        value (float): Accumulated value of this node from simulations.
+    """
+
+    def __init__(self, state: GameState, parent: "MCTSNode | None" = None):
         self.state: GameState = state
-        self.parent: TreeNode | None = parent
-        self.children: list[TreeNode] = []
+        self.parent: MCTSNode | None = parent
+        self.children: list[MCTSNode] = []
         self.visits: int = 0
         self.value: float = 0
 
@@ -43,7 +58,7 @@ class MCTS:
         self.exploration_weight: float = exploration_weight
         self.simulation_model: Model = simulation_model
 
-    def select(self, node: TreeNode) -> TreeNode:
+    def select(self, node: MCTSNode) -> MCTSNode:
         """
         Step 1: Selection - Select a child node using the UCT score.
 
@@ -67,7 +82,7 @@ class MCTS:
             node = max(node.children, key=self._uct_score)
         return node
 
-    def expand(self, node: TreeNode) -> TreeNode:
+    def expand(self, node: MCTSNode) -> MCTSNode:
         """
         Step 2: Expansion - Expand the given node by adding a new child.
 
@@ -87,11 +102,11 @@ class MCTS:
 
         action = unexplored_actions.pop()
         new_state = node.state.play(action)
-        child = TreeNode(new_state, parent=node)
+        child = MCTSNode(new_state, parent=node)
         node.children.append(child)
         return child
 
-    def simulate(self, node: TreeNode) -> float:
+    def simulate(self, node: MCTSNode) -> float:
         """
         Step 3: Simulation - Simulate a random playout from the given node.
 
@@ -109,7 +124,7 @@ class MCTS:
             current_state = current_state.play(action)
         return current_state.reward()
 
-    def backpropagate(self, node: TreeNode | None, reward: float) -> None:
+    def backpropagate(self, node: MCTSNode | None, reward: float) -> None:
         """
         Step 4: Backpropagation - Backpropagate the reward through the tree.
 
@@ -124,7 +139,7 @@ class MCTS:
             node.value += reward
             node = node.parent
 
-    def _uct_score(self, child: TreeNode) -> float:
+    def _uct_score(self, child: MCTSNode) -> float:
         """
         Calculate the UCT score for a child node.
 
@@ -143,7 +158,7 @@ class MCTS:
             math.log(parent_visits) / child.visits
         )
 
-    def search(self, initial_state: GameState, num_iterations: int = 1000) -> TreeNode:
+    def search(self, initial_state: GameState, num_iterations: int = 1000) -> MCTSNode:
         """
         Perform the MCTS search from the initial state.
 
@@ -156,7 +171,7 @@ class MCTS:
         Returns:
             Node: The best child node of the root (best next move).
         """
-        root = TreeNode(initial_state)
+        root = MCTSNode(initial_state)
         for _ in range(num_iterations):
             leaf = self.select(root)
             if not leaf.state.is_terminal():
