@@ -1,12 +1,19 @@
+from simulator.game.connect import Config  # type: ignore[import]
+
 from alphazero_implementation.alphazero import AlphaZero
-from alphazero_implementation.games.connect4 import Connect4
 from alphazero_implementation.models.neural_network import NeuralNetwork
+
+config = Config(6, 7, 4)
+
+state = config.sample_initial_state()
 
 
 def train():
-    game = Connect4()
-    model = NeuralNetwork(game.input_shape, 7)
-    alphazero = AlphaZero(game, model)
+    config = Config(6, 7, 4)
+    state = config.sample_initial_state()
+
+    model = NeuralNetwork((-1, 3, 6, 7), 7)
+    alphazero = AlphaZero(state, model)
     alphazero.run(num_iterations=50)
 
     # Save model after training

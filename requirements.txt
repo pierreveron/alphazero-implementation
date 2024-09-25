@@ -6,3 +6,4 @@ pandas
 pre-commit
 pytest
 ruff
+git+https://github.com/jojolebarjos/board-game-simulator-python.git@0.0.4
