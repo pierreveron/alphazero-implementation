@@ -3,7 +3,7 @@ import math
 import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
-from alphazero_implementation.models.model import NDArrayFloat
+from alphazero_implementation.models.model import Value
 from alphazero_implementation.models.neural_network import NeuralNetwork
 
 nn = NeuralNetwork((-1, 3, 6, 7), 7)
@@ -39,7 +39,7 @@ class Node:
         self.Q = Q
         self.game_state = game_state
         self.children_and_edge_visits: dict[Action, tuple[Node, int]] = {}
-        self.U: NDArrayFloat = np.zeros(self.game_state.config.num_players)
+        self.U: Value = np.zeros(self.game_state.config.num_players)
         self.hash = hash(game_state)
 
     @property
@@ -54,11 +54,11 @@ def is_game_over(node: Node):
     return node.game_state.has_ended
 
 
-def get_utility_of_game_outcome(state: State) -> NDArrayFloat:
+def get_utility_of_game_outcome(state: State) -> Value:
     return state.reward  # type: ignore[return-value]
 
 
-def get_utility_from_neural_net(state: State) -> NDArrayFloat:
+def get_utility_from_neural_net(state: State) -> Value:
     return nn.predict([state])[0][1]
 
 
