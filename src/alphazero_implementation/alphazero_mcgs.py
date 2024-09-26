@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from numpy.typing import NDArray
-from simulator.game.connect import Action, State  # type: ignore[import]
+from simulator.game.connect import State  # type: ignore[import]
 from torch import nn, optim
 
 from alphazero_implementation.mcts.mcgs import Node, perform_one_playout
@@ -100,6 +100,6 @@ class AlphaZeroMCGS:
 
         print("Training completed!")
 
-    def get_best_action(self, state: State) -> Action:
-        improved_policy = self.search(state)
-        return state.actions[np.argmax(improved_policy)]
+    # def get_best_action(self, state: State) -> Action:
+    #     improved_policy = self.search(state)
+    #     return state.actions[np.argmax(improved_policy)]
