@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import torch
 from numpy.typing import NDArray
@@ -60,19 +62,36 @@ class AlphaZeroMCGS:
 
         return trajectory
 
-    def train(self, num_iterations: int, num_episodes: int, initial_state: State):
+    def parallel_self_play(
+        self,
+        batch_size: int,
+        initial_state: State,
+    ) -> list[list[tuple[State, list[float], float]]]:
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self.self_play, initial_state)
+                for _ in range(batch_size)
+            ]
+            results = [future.result() for future in futures]
+        return results
+
+    def train(
+        self,
+        num_iterations: int,
+        self_play_batch_size: int,
+        initial_state: State,
+    ):
         # Replace BCELoss with CrossEntropyLoss for policy and MSELoss for value
         policy_criterion = nn.CrossEntropyLoss()
         value_criterion = nn.MSELoss()
         optimizer = optim.Adam(self.neural_network.parameters(), lr=0.01)  # type: ignore[no-untyped-call]
 
         for iteration in range(num_iterations):
-            training_data: list[tuple[State, list[float], float]] = []
-
-            # Generate self-play games
-            for _ in range(num_episodes):
-                trajectory = self.self_play(initial_state)
-                training_data.extend(trajectory)
+            # Generate self-play games using ThreadPoolExecutor
+            trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
+            training_data: list[tuple[State, list[float], float]] = [
+                item for sublist in trajectories for item in sublist
+            ]
 
             # Train the neural network
             states, policies, values = zip(*training_data)
