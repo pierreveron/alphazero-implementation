@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from numpy.typing import NDArray
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch import nn, optim
 
@@ -33,7 +34,7 @@ class AlphaZeroMCGS:
                 for action in state.actions
             ]
         )
-        improved_policy = visits / np.sum(visits)
+        improved_policy: NDArray[np.float64] = visits / np.sum(visits)
 
         return improved_policy.tolist()
 
