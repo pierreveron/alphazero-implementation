@@ -16,16 +16,16 @@ class AlphaZeroMCGS:
         self.num_simulations = num_simulations
 
     def search(self, state: State) -> list[float]:
-        # Create a local dictionary for nodes_by_hash
-        nodes_by_hash: dict[int, Node] = {}
+        # Create a local dictionary for nodes_by_state
+        nodes_by_state: dict[State, Node] = {}
 
         # Create the root node
         root = Node(game_state=state)
-        nodes_by_hash[root.hash] = root
+        nodes_by_state[state] = root
 
         # Perform MCGS simulations
         for _ in range(self.num_simulations):
-            perform_one_playout(root, nodes_by_hash)
+            perform_one_playout(root, nodes_by_state)
 
         # Calculate the improved policy
         visits = np.array(
