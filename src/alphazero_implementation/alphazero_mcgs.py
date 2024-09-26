@@ -85,13 +85,13 @@ class AlphaZeroMCGS:
         policy_criterion = nn.CrossEntropyLoss()
         value_criterion = nn.MSELoss()
         optimizer = optim.Adam(self.neural_network.parameters(), lr=0.01)  # type: ignore[no-untyped-call]
+        training_data: list[tuple[State, list[float], float]] = []
 
         for iteration in range(num_iterations):
             # Generate self-play games using ThreadPoolExecutor
             trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
-            training_data: list[tuple[State, list[float], float]] = [
-                item for sublist in trajectories for item in sublist
-            ]
+            training_data.extend([item for sublist in trajectories for item in sublist])
+            # TODO: remove old training data
 
             # Train the neural network
             states, policies, values = zip(*training_data)
@@ -104,18 +104,27 @@ class AlphaZeroMCGS:
             # Training loop
             num_epochs = 10
             for epoch in range(num_epochs):
-                # Forward pass
-                policy_outputs, value_outputs = self.neural_network(state_inputs)
+                # Shuffle the data
+                indices = torch.randperm(len(state_inputs))
+                state_inputs = state_inputs[indices]
+                policy_targets = policy_targets[indices]
+                value_targets = value_targets[indices]
+                batch_size = 10
+                for i in range(0, len(state_inputs), batch_size):
+                    # Forward pass
+                    policy_outputs, value_outputs = self.neural_network(
+                        state_inputs[i : i + batch_size]
+                    )
 
-                # Calculate losses
-                policy_loss = policy_criterion(policy_outputs, policy_targets)
-                value_loss = value_criterion(value_outputs.squeeze(), value_targets)
-                loss = policy_loss + value_loss
+                    # Calculate losses
+                    policy_loss = policy_criterion(policy_outputs, policy_targets)
+                    value_loss = value_criterion(value_outputs.squeeze(), value_targets)
+                    loss = policy_loss + value_loss
 
-                # Backward pass and optimization
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()  # type: ignore[no-untyped-call]
+                    # Backward pass and optimization
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()  # type: ignore[no-untyped-call]
 
                 print(
                     f"Iteration [{iteration+1}/{num_iterations}], Epoch [{epoch+1}/{num_epochs}], "
