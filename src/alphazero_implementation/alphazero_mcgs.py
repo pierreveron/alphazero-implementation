@@ -61,7 +61,9 @@ class AlphaZeroMCGS:
         return trajectory
 
     def train(self, num_iterations: int, num_episodes: int, initial_state: State):
-        criterion = nn.BCELoss()
+        # Replace BCELoss with CrossEntropyLoss for policy and MSELoss for value
+        policy_criterion = nn.CrossEntropyLoss()
+        value_criterion = nn.MSELoss()
         optimizer = optim.Adam(self.neural_network.parameters(), lr=0.01)  # type: ignore[no-untyped-call]
 
         for iteration in range(num_iterations):
@@ -85,8 +87,10 @@ class AlphaZeroMCGS:
             for epoch in range(num_epochs):
                 # Forward pass
                 policy_outputs, value_outputs = self.neural_network(state_inputs)
-                policy_loss = criterion(policy_outputs, policy_targets)
-                value_loss = criterion(value_outputs.squeeze(), value_targets)
+
+                # Calculate losses
+                policy_loss = policy_criterion(policy_outputs, policy_targets)
+                value_loss = value_criterion(value_outputs.squeeze(), value_targets)
                 loss = policy_loss + value_loss
 
                 # Backward pass and optimization
@@ -95,7 +99,9 @@ class AlphaZeroMCGS:
                 optimizer.step()  # type: ignore[no-untyped-call]
 
                 print(
-                    f"Iteration [{iteration+1}/{num_iterations}], Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}"
+                    f"Iteration [{iteration+1}/{num_iterations}], Epoch [{epoch+1}/{num_epochs}], "
+                    f"Policy Loss: {policy_loss.item():.4f}, Value Loss: {value_loss.item():.4f}, "
+                    f"Total Loss: {loss.item():.4f}"
                 )
 
         print("Training completed!")
