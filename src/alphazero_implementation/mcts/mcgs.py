@@ -105,7 +105,7 @@ def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
     return best_action  # type: ignore[no-any-return]
 
 
-def perform_one_playout(node: Node):
+def perform_one_playout(node: Node, nodes_by_hash: dict[int, Node]):
     if is_game_over(node):
         node.U = get_utility_of_game_outcome(node.game_state)
     elif node.N == 0:  # New node not yet visited
@@ -126,7 +126,7 @@ def perform_one_playout(node: Node):
                 nodes_by_hash[new_hash] = new_node
         (child, edge_visits) = node.children_and_edge_visits[action]
         # 3. Simulation
-        perform_one_playout(child)
+        perform_one_playout(child, nodes_by_hash)
         # 4. Backpropagation
         node.children_and_edge_visits[action] = (child, edge_visits + 1)
 

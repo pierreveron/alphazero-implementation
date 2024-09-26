@@ -22,7 +22,7 @@ class AlphaZeroMCGS:
 
         # Perform MCGS simulations
         for _ in range(self.num_simulations):
-            perform_one_playout(root)
+            perform_one_playout(root, nodes_by_hash)
 
         # Calculate the improved policy
         visits = np.array(
