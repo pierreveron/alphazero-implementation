@@ -1,14 +1,8 @@
-from pathlib import Path
-
-import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from alphazero_implementation.games.state import Action, GameState
-from alphazero_implementation.models.model import Model
 
-
-class NeuralNetwork(nn.Module, Model):
+class NeuralNetwork(nn.Module):
     """
     A neural network model that predicts the optimal action for a given game state.
     This model implements both nn.Module for PyTorch functionality and the custom Model interface.
@@ -36,31 +30,19 @@ class NeuralNetwork(nn.Module, Model):
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
-    def predict(self, state: GameState) -> tuple[Action, float]:
-        # Convert state to tensor
-        x: Tensor = torch.FloatTensor(state.to_input()).unsqueeze(0)
+    # def predict(self, states: list[State]) -> list[tuple[ActionPolicy, Value]]:
+    #     # Convert states to tensor
+    #     x: Tensor = torch.FloatTensor([state.to_input() for state in states])
 
-        # Get prediction
-        with torch.no_grad():
-            output: Tensor = self.forward(x)
+    #     # Get predictions
+    #     with torch.no_grad():
+    #         outputs: Tensor = self.forward(x)
 
-        # Convert output to action
-        action_index = output.argmax().item()
-        return Action(int(action_index)), 0
+    #     # Convert outputs to actions
+    #     action_indices = outputs.argmax(dim=1).tolist()
+    #     actions = [Action(int(index)) for index in action_indices]
 
-    def save(self, filepath: str | Path) -> None:
-        """Save the model parameters to a file."""
-        torch.save(self.state_dict(), filepath)  # type: ignore[no-untyped-call]
+    #     # For now, we're still returning 0 for the value predictions
+    #     values = [0.0] * len(states)
 
-    @classmethod
-    def load(
-        cls,
-        filepath: str | Path,
-        input_shape: tuple[int, int, int, int],
-        num_actions: int,
-    ) -> "NeuralNetwork":
-        """Load the model parameters from a file."""
-        model = cls(input_shape, num_actions)
-        model.load_state_dict(torch.load(filepath))  # type: ignore[no-untyped-call]
-        model.eval()
-        return model
+    #     return actions, values

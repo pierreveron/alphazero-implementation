@@ -47,9 +47,6 @@ class Node:
         return [child for (child, _) in self.children_and_edge_visits.values()]
 
 
-nodes_by_hash: dict[int, Node] = {}  # Add this line
-
-
 def is_game_over(node: Node):
     return node.game_state.has_ended
 
