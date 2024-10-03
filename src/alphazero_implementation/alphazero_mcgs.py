@@ -122,17 +122,19 @@ class AlphaZeroMCGS:
 
             # Calculate improved policies and choose actions
             new_active_games: list[State] = []
-            for i, (root, state) in enumerate(zip(roots, active_games)):
+            for root_index, root in enumerate(roots):
+                state = root.game_state
                 visits = np.array(
                     [
                         root.children_and_edge_visits[action][1]
                         if action in root.children_and_edge_visits
                         else 0
                         for action in state.actions
-                    ]
+                    ],
+                    dtype=np.float64,
                 )
                 improved_policy: NDArray[np.float64] = visits / np.sum(visits)
-                game_histories[i].append(
+                game_histories[root_index].append(
                     (
                         state,
                         improved_policy.tolist(),
@@ -150,10 +152,12 @@ class AlphaZeroMCGS:
                     new_active_games.append(new_state)
                 else:
                     final_reward = new_state.reward  # type: ignore[attr-defined]
-                    for j in range(len(game_histories[i]) - 1, -1, -1):
-                        game_histories[i][j] = game_histories[i][j][:2] + (
-                            final_reward.tolist(),
-                        )
+                    # Backpropagate the final reward to all states in this game's history
+                    # Start from the last state and go backwards
+                    for j in range(len(game_histories[root_index]) - 1, -1, -1):
+                        game_histories[root_index][j] = game_histories[root_index][j][
+                            :2
+                        ] + (final_reward.tolist(),)
 
             active_games = new_active_games
 
