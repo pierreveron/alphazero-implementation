@@ -1,12 +1,13 @@
-from concurrent.futures import ThreadPoolExecutor
-
 import numpy as np
 import torch
 from numpy.typing import NDArray
-from simulator.game.connect import State  # type: ignore[import]
+from simulator.game.connect import Action, State  # type: ignore[import]
 from torch import nn, optim
 
-from alphazero_implementation.mcts.mcgs import Node, perform_one_playout
+from alphazero_implementation.mcts.mcgs import (
+    Node,
+    select_action_according_to_puct,
+)
 from alphazero_implementation.models.neural_network import NeuralNetwork
 
 
@@ -15,65 +16,111 @@ class AlphaZeroMCGS:
         self.neural_network = neural_network
         self.num_simulations = num_simulations
 
-    def search(self, state: State) -> list[float]:
-        # Create a local dictionary for nodes_by_state
-        nodes_by_state: dict[State, Node] = {}
-
-        # Create the root node
-        root = Node(game_state=state)
-        nodes_by_state[state] = root
-
-        # Perform MCGS simulations
-        for _ in range(self.num_simulations):
-            perform_one_playout(root, nodes_by_state)
-
-        # Calculate the improved policy
-        visits = np.array(
-            [
-                root.children_and_edge_visits[action][1]
-                if action in root.children_and_edge_visits
-                else 0
-                for action in state.actions
-            ]
-        )
-        improved_policy: NDArray[np.float64] = visits / np.sum(visits)
-
-        return improved_policy.tolist()
-
-    def self_play(self, initial_state: State) -> list[tuple[State, list[float], float]]:
-        trajectory: list[tuple[State, list[float], float]] = []
-        state = initial_state
-
-        while not state.has_ended:
-            improved_policy = self.search(state)
-            trajectory.append(
-                (state, improved_policy, 0)
-            )  # 0 is a placeholder for the value
-
-            # Choose action based on the improved policy
-            action = np.random.choice(len(state.actions), p=improved_policy)
-            state = state.actions[action].sample_next_state()
-
-        # Update the values in the trajectory
-        final_reward = state.reward  # type: ignore[attr-defined]
-        for i in range(len(trajectory) - 1, -1, -1):
-            state, policy, _ = trajectory[i]
-            trajectory[i] = (state, policy, final_reward[state.player])
-
-        return trajectory
-
     def parallel_self_play(
         self,
         batch_size: int,
         initial_state: State,
     ) -> list[list[tuple[State, list[float], float]]]:
-        with ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(self.self_play, initial_state)
-                for _ in range(batch_size)
-            ]
-            results = [future.result() for future in futures]
-        return results
+        trajectories: list[list[tuple[State, list[float], float]]] = []
+        for _ in range(batch_size):
+            trajectory: list[tuple[State, list[float], float]] = []
+            state = initial_state
+            while not state.has_ended:
+                # Search for the improved policy
+                # Create a local dictionary for nodes_by_state
+                nodes_by_state: dict[State, Node] = {}
+
+                # Create the root node
+                root = Node(game_state=state)
+                nodes_by_state[state] = root
+
+                # Perform MCGS simulations
+                for _ in range(self.num_simulations):
+                    node = root
+                    path: list[tuple[Node, Action]] = []
+
+                    while True:
+                        if node.game_state.has_ended:
+                            node.U = node.game_state.reward  # type: ignore[attr-defined]
+                            break
+                        elif node.N == 0:  # New node not yet visited
+                            node.action_policy, node.U = self.neural_network(
+                                node.game_state
+                            )
+                            break
+                        else:
+                            # 1. Selection
+                            action = select_action_according_to_puct(node)
+                            if action not in node.children_and_edge_visits:
+                                # 2. Expansion
+                                new_game_state = action.sample_next_state()
+                                if new_game_state in nodes_by_state:
+                                    child = nodes_by_state[new_game_state]
+                                    node.children_and_edge_visits[action] = (child, 0)
+                                else:
+                                    new_node = Node(game_state=new_game_state)
+                                    node.children_and_edge_visits[action] = (
+                                        new_node,
+                                        0,
+                                    )
+                                    nodes_by_state[new_game_state] = new_node
+                                child = node.children_and_edge_visits[action][0]
+                                path.append((node, action))
+                                node = child
+                                break
+                            else:
+                                child, _ = node.children_and_edge_visits[action]
+                                path.append((node, action))
+                                node = child
+
+                    # Backpropagation
+                    for parent, action in reversed(path):
+                        child, edge_visits = parent.children_and_edge_visits[action]
+                        parent.children_and_edge_visits[action] = (
+                            child,
+                            edge_visits + 1,
+                        )
+
+                        children_and_edge_visits = (
+                            parent.children_and_edge_visits.values()
+                        )
+                        parent.N = 1 + sum(
+                            edge_visits for (_, edge_visits) in children_and_edge_visits
+                        )
+                        parent.Q = (1 / parent.N) * (
+                            parent.U[parent.game_state.player]
+                            + sum(
+                                child.Q * edge_visits
+                                for (child, edge_visits) in children_and_edge_visits
+                            )
+                        )
+
+                # Calculate the improved policy
+                visits = np.array(
+                    [
+                        root.children_and_edge_visits[action][1]
+                        if action in root.children_and_edge_visits
+                        else 0
+                        for action in state.actions
+                    ]
+                )
+                improved_policy: NDArray[np.float64] = visits / np.sum(visits)
+                trajectory.append(
+                    (state, improved_policy.tolist(), 0)
+                )  # 0 is a placeholder for the value
+
+                # Choose action based on the improved policy
+                action = np.random.choice(len(state.actions), p=improved_policy)
+                state = state.actions[action].sample_next_state()
+
+            # Update the values in the trajectory
+            final_reward = state.reward  # type: ignore[attr-defined]
+            for i in range(len(trajectory) - 1, -1, -1):
+                state, policy, _ = trajectory[i]
+                trajectory[i] = (state, policy, final_reward[state.player])
+
+            trajectories.append(trajectory)
+        return trajectories
 
     def train(
         self,
