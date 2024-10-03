@@ -227,7 +227,3 @@ class AlphaZeroMCGS:
                     )
 
         print("Training completed!")
-
-    # def get_best_action(self, state: State) -> Action:
-    #     improved_policy = self.search(state)
-    #     return state.actions[np.argmax(improved_policy)]
