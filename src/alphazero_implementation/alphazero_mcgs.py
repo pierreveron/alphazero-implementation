@@ -29,12 +29,16 @@ class AlphaZeroMCGS:
         initial_state: State,
     ) -> list[GameHistory]:
         game_histories: list[GameHistory] = [[] for _ in range(batch_size)]
-        active_games: list[State] = [initial_state for _ in range(batch_size)]
+        games: list[State | None] = [initial_state for _ in range(batch_size)]
 
-        while active_games:
-            roots: list[Node] = [Node(game_state=state) for state in active_games]
+        while any(
+            game is not None for game in games
+        ):  # while not all(game is None for game in games):
+            roots: list[Node | None] = [
+                Node(game_state=state) for state in games if state is not None
+            ]
             nodes_by_state_list: list[dict[State, Node]] = [
-                {active_games[i]: root} for i, root in enumerate(roots)
+                {root.game_state: root} for root in roots if root is not None
             ]
 
             # Monte Carlo Tree Search / Graph Search
@@ -42,6 +46,8 @@ class AlphaZeroMCGS:
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
 
                 for root in roots:
+                    if root is None:
+                        continue
                     node: Node = root
                     path: list[tuple[Node, Action]] = []
 
@@ -121,8 +127,9 @@ class AlphaZeroMCGS:
                             )
 
             # Calculate improved policies and choose actions
-            new_active_games: list[State] = []
             for root_index, root in enumerate(roots):
+                if root is None:
+                    continue
                 state = root.game_state
                 visits = np.array(
                     [
@@ -149,8 +156,9 @@ class AlphaZeroMCGS:
                 new_state: State = chosen_action.sample_next_state()
 
                 if not new_state.has_ended:
-                    new_active_games.append(new_state)
+                    games[root_index] = new_state
                 else:
+                    games[root_index] = None
                     final_reward = new_state.reward  # type: ignore[attr-defined]
                     # Backpropagate the final reward to all states in this game's history
                     # Start from the last state and go backwards
@@ -158,8 +166,6 @@ class AlphaZeroMCGS:
                         game_histories[root_index][j] = game_histories[root_index][j][
                             :2
                         ] + (final_reward.tolist(),)
-
-            active_games = new_active_games
 
         return game_histories
 
