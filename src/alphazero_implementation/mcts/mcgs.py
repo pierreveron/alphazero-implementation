@@ -55,7 +55,6 @@ def get_utility_of_game_outcome(state: State) -> Value:
 
 def get_utility_from_neural_net(state: State) -> tuple[ActionPolicy, Value]:
     return nn.predict([state])[0]
-    # return nn.predict([state])[0][1]
 
 
 def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
@@ -102,36 +101,50 @@ def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
     return best_action  # type: ignore[no-any-return]
 
 
-def perform_one_playout(node: Node, nodes_by_state: dict[State, Node]):
-    if is_game_over(node):
-        node.U = get_utility_of_game_outcome(node.game_state)
-    elif node.N == 0:  # New node not yet visited
-        node.action_policy, node.U = get_utility_from_neural_net(node.game_state)
-    else:
-        # 1. Selection
-        action = select_action_according_to_puct(node)
-        if action not in node.children_and_edge_visits:
-            # 2. Expansion
-            new_game_state = action.sample_next_state()
-            if new_game_state in nodes_by_state:
-                child = nodes_by_state[new_game_state]
-                node.children_and_edge_visits[action] = (child, 0)
+def perform_one_playout(root: Node, nodes_by_state: dict[State, Node]):
+    node = root
+    path: list[tuple[Node, Action]] = []
+
+    while True:
+        if is_game_over(node):
+            node.U = get_utility_of_game_outcome(node.game_state)
+            break
+        elif node.N == 0:  # New node not yet visited
+            node.action_policy, node.U = get_utility_from_neural_net(node.game_state)
+            break
+        else:
+            # 1. Selection
+            action = select_action_according_to_puct(node)
+            if action not in node.children_and_edge_visits:
+                # 2. Expansion
+                new_game_state = action.sample_next_state()
+                if new_game_state in nodes_by_state:
+                    child = nodes_by_state[new_game_state]
+                    node.children_and_edge_visits[action] = (child, 0)
+                else:
+                    new_node = Node(game_state=new_game_state)
+                    node.children_and_edge_visits[action] = (new_node, 0)
+                    nodes_by_state[new_game_state] = new_node
+                child = node.children_and_edge_visits[action][0]
+                path.append((node, action))
+                node = child
+                break
             else:
-                new_node = Node(game_state=new_game_state)
-                node.children_and_edge_visits[action] = (new_node, 0)
-                nodes_by_state[new_game_state] = new_node
-        (child, edge_visits) = node.children_and_edge_visits[action]
-        # 3. Simulation
-        perform_one_playout(child, nodes_by_state)
-        # 4. Backpropagation
-        node.children_and_edge_visits[action] = (child, edge_visits + 1)
+                child, _ = node.children_and_edge_visits[action]
+                path.append((node, action))
+                node = child
 
-    children_and_edge_visits = node.children_and_edge_visits.values()
+    # Backpropagation
+    for parent, action in reversed(path):
+        child, edge_visits = parent.children_and_edge_visits[action]
+        parent.children_and_edge_visits[action] = (child, edge_visits + 1)
 
-    node.N = 1 + sum(edge_visits for (_, edge_visits) in children_and_edge_visits)
-    node.Q = (1 / node.N) * (
-        node.U[node.game_state.player]
-        + sum(
-            child.Q * edge_visits for (child, edge_visits) in children_and_edge_visits
+        children_and_edge_visits = parent.children_and_edge_visits.values()
+        parent.N = 1 + sum(edge_visits for (_, edge_visits) in children_and_edge_visits)
+        parent.Q = (1 / parent.N) * (
+            parent.U[parent.game_state.player]
+            + sum(
+                child.Q * edge_visits
+                for (child, edge_visits) in children_and_edge_visits
+            )
         )
-    )
