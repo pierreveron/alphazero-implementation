@@ -196,6 +196,7 @@ class AlphaZeroMCGS:
             value_targets = torch.FloatTensor(values)
 
             # Training loop
+            self.neural_network.train()
             num_epochs = 10
             for epoch in range(num_epochs):
                 # Shuffle the data
