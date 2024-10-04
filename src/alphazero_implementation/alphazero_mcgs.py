@@ -2,12 +2,13 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 from simulator.game.connect import Action, State  # type: ignore[import]
-from torch import nn, optim
+from torch import optim
 
 from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
+from alphazero_implementation.models.AlphaZeroLoss import AlphaZeroLoss
 from alphazero_implementation.models.neural_network import NeuralNetwork
 
 # GameHistory represents the trajectory of a single game
@@ -176,8 +177,7 @@ class AlphaZeroMCGS:
         initial_state: State,
     ):
         # Replace BCELoss with CrossEntropyLoss for policy and MSELoss for value
-        policy_criterion = nn.CrossEntropyLoss()
-        value_criterion = nn.MSELoss()
+        criterion = AlphaZeroLoss(c=0.01)
         optimizer = optim.Adam(self.neural_network.parameters(), lr=0.01)  # type: ignore[no-untyped-call]
         training_data: list[tuple[State, list[float], list[float]]] = []
 
@@ -211,19 +211,22 @@ class AlphaZeroMCGS:
                         state_inputs[i : i + batch_size]
                     )
 
-                    # Calculate losses
-                    policy_loss = policy_criterion(policy_outputs, policy_targets)
-                    value_loss = value_criterion(value_outputs.squeeze(), value_targets)
-                    loss = policy_loss + value_loss
+                    # Calculate loss
+                    loss = criterion.forward(
+                        value_outputs,
+                        value_targets,
+                        policy_outputs,
+                        policy_targets,
+                        self.neural_network.parameters(),
+                    )
 
                     # Backward pass and optimization
                     optimizer.zero_grad()
-                    loss.backward()
+                    loss.backward()  # type: ignore[no-untyped-call]
                     optimizer.step()  # type: ignore[no-untyped-call]
 
                     print(
                         f"Iteration [{iteration+1}/{num_iterations}], Epoch [{epoch+1}/{num_epochs}], "
-                        f"Policy Loss: {policy_loss.item():.4f}, Value Loss: {value_loss.item():.4f}, "
                         f"Total Loss: {loss.item():.4f}"
                     )
 
