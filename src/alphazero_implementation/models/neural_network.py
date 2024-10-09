@@ -70,7 +70,7 @@ class AlphaZeroLightningModule(pl.LightningModule, Model):
 
     def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
         # Convert states to tensor
-        x: Tensor = torch.FloatTensor([state.to_input() for state in states])
+        x: Tensor = torch.FloatTensor([state.grid for state in states])  # type: ignore[arg-type]
 
         # Get predictions
         with torch.no_grad():
