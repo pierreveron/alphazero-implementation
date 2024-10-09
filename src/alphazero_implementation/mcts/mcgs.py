@@ -4,9 +4,6 @@ import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
 from alphazero_implementation.models.model import ActionPolicy, Value
-from alphazero_implementation.models.neural_network import NeuralNetwork
-
-nn = NeuralNetwork((-1, 3, 6, 7), 7)
 
 
 class Node:
