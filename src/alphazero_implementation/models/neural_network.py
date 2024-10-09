@@ -1,8 +1,12 @@
+import torch
 import torch.nn.functional as F
+from simulator.game.connect import State  # type: ignore[import]
 from torch import Tensor, nn
 
+from alphazero_implementation.models.model import ActionPolicy, Model, Value
 
-class NeuralNetwork(nn.Module):
+
+class NeuralNetwork(nn.Module, Model):
     """
     A neural network model that predicts the optimal action for a given game state.
     This model implements both nn.Module for PyTorch functionality and the custom Model interface.
@@ -19,30 +23,40 @@ class NeuralNetwork(nn.Module):
         self.flat_features: int = 64 * input_shape[2] * input_shape[3]
 
         self.fc1: nn.Linear = nn.Linear(self.flat_features, 256)
-        self.fc2: nn.Linear = nn.Linear(256, num_actions)
+        self.policy_head = nn.Linear(256, num_actions)
+        self.value_head = nn.Linear(256, 1)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = x.view(-1, self.flat_features)
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return F.softmax(x, dim=1)
 
-    # def predict(self, states: list[State]) -> list[tuple[ActionPolicy, Value]]:
-    #     # Convert states to tensor
-    #     x: Tensor = torch.FloatTensor([state.to_input() for state in states])
+        policy = F.softmax(self.policy_head(x), dim=1)
+        value = torch.tanh(self.value_head(x))
 
-    #     # Get predictions
-    #     with torch.no_grad():
-    #         outputs: Tensor = self.forward(x)
+        return policy, value
 
-    #     # Convert outputs to actions
-    #     action_indices = outputs.argmax(dim=1).tolist()
-    #     actions = [Action(int(index)) for index in action_indices]
+    def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
+        # Convert states to tensor
+        x: Tensor = torch.FloatTensor([state.grid for state in states])  # type: ignore[arg-type]
 
-    #     # For now, we're still returning 0 for the value predictions
-    #     values = [0.0] * len(states)
+        # Get predictions
+        with torch.no_grad():
+            policy_outputs, value_outputs = self.forward(x)
 
-    #     return actions, values
+        action_policies: list[ActionPolicy] = []
+        values: list[Value] = []
+        for i, state in enumerate(states):
+            for action in state.actions:
+                policy_output = policy_outputs[i]
+                value_output = value_outputs[i]
+                action_policies.append({action: policy_output.tolist()})
+                values.append(value_output.tolist())
+
+        # Convert to lists of floats
+        # policies = policy_outputs.tolist()
+        # values = value_outputs.squeeze(-1).tolist()
+
+        return action_policies, values

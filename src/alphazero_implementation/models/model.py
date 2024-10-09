@@ -23,23 +23,23 @@ class Model(ABC):
     """
 
     @abstractmethod
-    def predict(self, states: list[State]) -> list[tuple[ActionPolicy, Value]]:
+    def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
         """
         Predict action probabilities and state values for a list of game states.
 
-        This method takes a list of game states and returns a list of tuples, where each tuple contains:
-        1. An action policy: A dictionary mapping legal actions to their probabilities.
-        2. A state value: An array representing the estimated value of the state for each player.
+        This method takes a list of game states and returns two lists:
+        1. A list of action policies: Each policy is a dictionary mapping legal actions to their probabilities.
+        2. A list of state values: Each value is an array representing the estimated value of the state for each player.
 
-        The action policy provides a probability distribution over possible moves, while the
-        state value estimates the expected outcome of the game from the current state for each player.
+        The action policies provide probability distributions over possible moves for each state,
+        while the state values estimate the expected outcomes of the game from each state for each player.
 
         Args:
             states (list[State]): A list of game states to evaluate.
 
         Returns:
-            list[tuple[ActionPolicy, Value]]: A list of tuples, one for each state, where each tuple contains:
-                - ActionPolicy: A dictionary mapping legal actions to their probabilities.
-                - Value: An array representing the estimated value of the state for each player.
+            tuple[list[ActionPolicy], list[Value]]: A tuple containing:
+                - list[ActionPolicy]: A list of dictionaries, each mapping legal actions to their probabilities.
+                - list[Value]: A list of arrays, each representing the estimated value of a state for each player.
         """
         pass
