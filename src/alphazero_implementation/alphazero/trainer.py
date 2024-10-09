@@ -1,8 +1,8 @@
+import lightning as L
 import numpy as np
-import pytorch_lightning as pl
 import torch
+from lightning.pytorch.tuner import Tuner  # type: ignore[import]
 from numpy.typing import NDArray
-from pytorch_lightning.loggers import TensorBoardLogger
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -10,7 +10,6 @@ from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
-from alphazero_implementation.models.games.connect4.v0 import AlphaZeroLightningModule
 
 # GameHistory represents the trajectory of a single game
 # It is a list of tuples, where each tuple contains:
@@ -21,10 +20,8 @@ GameHistory = list[tuple[State, list[float], list[float]]]
 
 
 class AlphaZeroTrainer:
-    def __init__(
-        self, neural_network: AlphaZeroLightningModule, num_simulations: int = 800
-    ):
-        self.neural_network = neural_network
+    def __init__(self, model: L.LightningModule, num_simulations: int = 800):
+        self.model = model
         self.num_simulations = num_simulations
 
     def parallel_self_play(
@@ -100,7 +97,7 @@ class AlphaZeroTrainer:
                         node.game_state for node, _ in leaf_nodes
                     ]
 
-                    policies, values = self.neural_network.predict(states_to_evaluate)
+                    policies, values = self.model.predict(states_to_evaluate)
 
                     for i, (node, path) in enumerate(leaf_nodes):
                         node.action_policy = policies[i]
@@ -186,27 +183,25 @@ class AlphaZeroTrainer:
             training_data.extend([item for sublist in trajectories for item in sublist])
             # TODO: remove old training data
 
-            # Prepare data for PyTorch Lightning
             states, policies, values = zip(*training_data)
             state_inputs = torch.FloatTensor([state.to_input() for state in states])
             policy_targets = torch.FloatTensor(policies)
             value_targets = torch.FloatTensor(values)
 
-            # Create DataLoader
             dataset = TensorDataset(state_inputs, policy_targets, value_targets)
             dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-            # Set up PyTorch Lightning Trainer
-            logger = TensorBoardLogger("lightning_logs", name="alphazero")
-            trainer = pl.Trainer(
+            trainer = L.Trainer(
                 max_epochs=10,
-                logger=logger,
                 log_every_n_steps=10,
                 enable_progress_bar=True,
             )
 
+            tuner = Tuner(trainer)
+            tuner.lr_find(self.model)
+
             # Train the model
-            trainer.fit(self.neural_network, dataloader)
+            trainer.fit(self.model, dataloader)
 
             print(f"Iteration [{iteration+1}/{num_iterations}] completed!")
 
