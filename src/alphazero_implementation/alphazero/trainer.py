@@ -10,7 +10,7 @@ from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
-from alphazero_implementation.models.neural_network import AlphaZeroLightningModule
+from alphazero_implementation.models.games.connect4.v0 import AlphaZeroLightningModule
 
 # GameHistory represents the trajectory of a single game
 # It is a list of tuples, where each tuple contains:
@@ -20,7 +20,7 @@ from alphazero_implementation.models.neural_network import AlphaZeroLightningMod
 GameHistory = list[tuple[State, list[float], list[float]]]
 
 
-class AlphaZeroMCGS:
+class AlphaZeroTrainer:
     def __init__(
         self, neural_network: AlphaZeroLightningModule, num_simulations: int = 800
     ):
@@ -182,7 +182,6 @@ class AlphaZeroMCGS:
         training_data: list[tuple[State, list[float], list[float]]] = []
 
         for iteration in range(num_iterations):
-            # Generate self-play games using ThreadPoolExecutor
             trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
             training_data.extend([item for sublist in trajectories for item in sublist])
             # TODO: remove old training data
