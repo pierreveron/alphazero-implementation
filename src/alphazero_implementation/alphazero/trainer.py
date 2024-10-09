@@ -178,6 +178,13 @@ class AlphaZeroTrainer:
     ):
         training_data: list[tuple[State, list[float], list[float]]] = []
 
+        trainer = L.Trainer(
+            max_epochs=10,
+            log_every_n_steps=10,
+            enable_progress_bar=True,
+        )
+        tuner = Tuner(trainer)
+
         for iteration in range(num_iterations):
             trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
             training_data.extend([item for sublist in trajectories for item in sublist])
@@ -191,16 +198,8 @@ class AlphaZeroTrainer:
             dataset = TensorDataset(state_inputs, policy_targets, value_targets)
             dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-            trainer = L.Trainer(
-                max_epochs=10,
-                log_every_n_steps=10,
-                enable_progress_bar=True,
-            )
-
-            tuner = Tuner(trainer)
             tuner.lr_find(self.model)
 
-            # Train the model
             trainer.fit(self.model, dataloader)
 
             print(f"Iteration [{iteration+1}/{num_iterations}] completed!")
