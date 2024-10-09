@@ -1,14 +1,15 @@
+import lightning as L
 import numpy as np
 import torch
+from lightning.pytorch.tuner import Tuner  # type: ignore[import]
 from numpy.typing import NDArray
 from simulator.game.connect import Action, State  # type: ignore[import]
-from torch import nn, optim
+from torch.utils.data import DataLoader, TensorDataset
 
 from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
-from alphazero_implementation.models.neural_network import NeuralNetwork
 
 # GameHistory represents the trajectory of a single game
 # It is a list of tuples, where each tuple contains:
@@ -18,9 +19,9 @@ from alphazero_implementation.models.neural_network import NeuralNetwork
 GameHistory = list[tuple[State, list[float], list[float]]]
 
 
-class AlphaZeroMCGS:
-    def __init__(self, neural_network: NeuralNetwork, num_simulations: int = 800):
-        self.neural_network = neural_network
+class AlphaZeroTrainer:
+    def __init__(self, model: L.LightningModule, num_simulations: int = 800):
+        self.model = model
         self.num_simulations = num_simulations
 
     def parallel_self_play(
@@ -96,7 +97,7 @@ class AlphaZeroMCGS:
                         node.game_state for node, _ in leaf_nodes
                     ]
 
-                    policies, values = self.neural_network.predict(states_to_evaluate)
+                    policies, values = self.model.predict(states_to_evaluate)
 
                     for i, (node, path) in enumerate(leaf_nodes):
                         node.action_policy = policies[i]
@@ -175,56 +176,32 @@ class AlphaZeroMCGS:
         self_play_batch_size: int,
         initial_state: State,
     ):
-        # Replace BCELoss with CrossEntropyLoss for policy and MSELoss for value
-        policy_criterion = nn.CrossEntropyLoss()
-        value_criterion = nn.MSELoss()
-        optimizer = optim.Adam(self.neural_network.parameters(), lr=0.01)  # type: ignore[no-untyped-call]
-        training_data: list[tuple[State, list[float], list[float]]] = []
+        training_data: GameHistory = []
+
+        trainer = L.Trainer(
+            max_epochs=10,
+            log_every_n_steps=10,
+            enable_progress_bar=True,
+        )
+        tuner = Tuner(trainer)
 
         for iteration in range(num_iterations):
-            # Generate self-play games using ThreadPoolExecutor
             trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
             training_data.extend([item for sublist in trajectories for item in sublist])
             # TODO: remove old training data
 
-            # Train the neural network
             states, policies, values = zip(*training_data)
-
-            # Convert data to tensors
-            state_inputs = torch.FloatTensor([state.to_input() for state in states])
+            state_inputs = torch.FloatTensor([state.grid for state in states])
             policy_targets = torch.FloatTensor(policies)
             value_targets = torch.FloatTensor(values)
 
-            # Training loop
-            self.neural_network.train()
-            num_epochs = 10
-            for epoch in range(num_epochs):
-                # Shuffle the data
-                indices = torch.randperm(len(state_inputs))
-                state_inputs = state_inputs[indices]
-                policy_targets = policy_targets[indices]
-                value_targets = value_targets[indices]
-                batch_size = 10
-                for i in range(0, len(state_inputs), batch_size):
-                    # Forward pass
-                    policy_outputs, value_outputs = self.neural_network(
-                        state_inputs[i : i + batch_size]
-                    )
+            dataset = TensorDataset(state_inputs, policy_targets, value_targets)
+            dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-                    # Calculate losses
-                    policy_loss = policy_criterion(policy_outputs, policy_targets)
-                    value_loss = value_criterion(value_outputs.squeeze(), value_targets)
-                    loss = policy_loss + value_loss
+            tuner.lr_find(self.model)
 
-                    # Backward pass and optimization
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()  # type: ignore[no-untyped-call]
+            trainer.fit(self.model, dataloader)
 
-                    print(
-                        f"Iteration [{iteration+1}/{num_iterations}], Epoch [{epoch+1}/{num_epochs}], "
-                        f"Policy Loss: {policy_loss.item():.4f}, Value Loss: {value_loss.item():.4f}, "
-                        f"Total Loss: {loss.item():.4f}"
-                    )
+            print(f"Iteration [{iteration+1}/{num_iterations}] completed!")
 
         print("Training completed!")

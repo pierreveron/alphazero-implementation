@@ -2,9 +2,7 @@ import torch
 from simulator.game.connect import Config, State  # type: ignore[import]
 from torch import Tensor, nn
 
-from alphazero_implementation.alphazero_mcgs import AlphaZeroMCGS
 from alphazero_implementation.models.model import ActionPolicy, Value
-from alphazero_implementation.models.neural_network import NeuralNetwork
 
 
 def infer(model: nn.Module, X: Tensor) -> Tensor:
