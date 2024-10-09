@@ -191,7 +191,7 @@ class AlphaZeroTrainer:
             # TODO: remove old training data
 
             states, policies, values = zip(*training_data)
-            state_inputs = torch.FloatTensor([state.to_input() for state in states])
+            state_inputs = torch.FloatTensor([state.grid for state in states])
             policy_targets = torch.FloatTensor(policies)
             value_targets = torch.FloatTensor(values)
 
