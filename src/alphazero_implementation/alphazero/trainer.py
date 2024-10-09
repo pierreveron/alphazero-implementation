@@ -176,7 +176,7 @@ class AlphaZeroTrainer:
         self_play_batch_size: int,
         initial_state: State,
     ):
-        training_data: list[tuple[State, list[float], list[float]]] = []
+        training_data: GameHistory = []
 
         trainer = L.Trainer(
             max_epochs=10,
