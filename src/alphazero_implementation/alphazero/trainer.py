@@ -1,7 +1,6 @@
 import lightning as L
 import numpy as np
 import torch
-from lightning.pytorch.tuner import Tuner  # type: ignore[import]
 from numpy.typing import NDArray
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch.utils.data import DataLoader, TensorDataset
@@ -10,6 +9,12 @@ from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
+
+
+def list_to_tensor_numpy(grid_list: list[NDArray[np.float64]]) -> torch.Tensor:
+    stacked = np.stack(grid_list)
+    return torch.tensor(stacked, dtype=torch.float32)
+
 
 # GameHistory represents the trajectory of a single game
 # It is a list of tuples, where each tuple contains:
@@ -20,9 +25,9 @@ GameHistory = list[tuple[State, list[float], list[float]]]
 
 
 class AlphaZeroTrainer:
-    def __init__(self, model: L.LightningModule, num_simulations: int = 800):
+    def __init__(self, model: L.LightningModule, mcgs_num_simulations: int = 800):
         self.model = model
-        self.num_simulations = num_simulations
+        self.mcgs_num_simulations = mcgs_num_simulations
 
     def parallel_self_play(
         self,
@@ -43,7 +48,7 @@ class AlphaZeroTrainer:
             ]
 
             # Monte Carlo Tree Search / Graph Search
-            for _ in range(self.num_simulations):
+            for _ in range(self.mcgs_num_simulations):
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
 
                 for root in roots:
@@ -97,7 +102,11 @@ class AlphaZeroTrainer:
                         node.game_state for node, _ in leaf_nodes
                     ]
 
-                    policies, values = self.model.predict(states_to_evaluate)
+                    policies, values = self.model.forward(
+                        list_to_tensor_numpy(
+                            [state.grid for state in states_to_evaluate]  # type: ignore[arg-type]
+                        )
+                    )
 
                     for i, (node, path) in enumerate(leaf_nodes):
                         node.action_policy = policies[i]
@@ -141,7 +150,13 @@ class AlphaZeroTrainer:
                     ],
                     dtype=np.float64,
                 )
-                improved_policy: NDArray[np.float64] = visits / np.sum(visits)
+                sum_visits = np.sum(visits)
+                if sum_visits > 0:
+                    improved_policy = visits / sum_visits
+                else:
+                    # If sum_visits is 0, use a uniform distribution
+                    improved_policy = np.ones_like(visits) / len(visits)
+
                 game_histories[root_index].append(
                     (
                         state,
@@ -183,7 +198,7 @@ class AlphaZeroTrainer:
             log_every_n_steps=10,
             enable_progress_bar=True,
         )
-        tuner = Tuner(trainer)
+        # tuner = Tuner(trainer)
 
         for iteration in range(num_iterations):
             trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
@@ -198,7 +213,7 @@ class AlphaZeroTrainer:
             dataset = TensorDataset(state_inputs, policy_targets, value_targets)
             dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-            tuner.lr_find(self.model)
+            # tuner.lr_find(self.model)
 
             trainer.fit(self.model, dataloader)
 
