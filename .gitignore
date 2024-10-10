@@ -12,3 +12,6 @@
 
 # Python virtual environment
 .venv/
+
+# Pytorch lightning logs
+lightning_logs/
