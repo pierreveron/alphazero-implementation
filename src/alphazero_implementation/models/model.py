@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
 
 import lightning as L
-import numpy as np
-import torch
 import torch.nn.functional as F
-from numpy.typing import NDArray
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
@@ -59,10 +56,9 @@ class Model(ABC, L.LightningModule):
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
         pass
 
+    @abstractmethod
     def _states_to_tensor(self, states: list[State]) -> Tensor:
-        grids: list[NDArray[np.float64]] = [state.grid for state in states]  # type: ignore[attr-defined]
-        stacked = np.stack(grids)
-        return torch.tensor(stacked, dtype=torch.float32)
+        pass
 
     @abstractmethod
     def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
