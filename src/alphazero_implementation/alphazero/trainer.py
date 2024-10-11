@@ -180,16 +180,19 @@ class AlphaZeroTrainer:
         num_iterations: int,
         self_play_batch_size: int,
         initial_state: State,
+        max_epochs: int = 100,
     ):
         training_data: GameHistory = []
 
         trainer = L.Trainer(
-            max_epochs=10,
+            max_epochs=max_epochs,
             log_every_n_steps=10,
             enable_progress_bar=True,
         )
         # tuner = Tuner(trainer)
 
+        # Deepmind's AlphaZero pseudocode continuously train the model as an optimization
+        # process, but we choose to do this in smaller batches
         for iteration in range(num_iterations):
             trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
             training_data.extend([item for sublist in trajectories for item in sublist])
