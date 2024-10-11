@@ -1,12 +1,9 @@
-from typing import Any
-
-import lightning as L
-import torch.nn.functional as F
 from torch import Tensor, nn
-from torch.optim import Adam  # type: ignore[import]
+
+from alphazero_implementation.models.games.connect4.connect4_model import Connect4Model
 
 
-class BasicNN(L.LightningModule):
+class BasicNN(Connect4Model):
     def __init__(self, height: int, width: int, max_actions: int, num_players: int):
         super(BasicNN, self).__init__()  # type: ignore[call-arg]
         self.flatten = nn.Flatten()
@@ -33,25 +30,3 @@ class BasicNN(L.LightningModule):
         value = self.value_head(shared_output)
 
         return policy_logits, value
-
-    def training_step(self, batch: Any, batch_idx: int) -> Tensor:
-        x, policy_target, value_target = batch
-        policy_logits, value = self(x)
-
-        # Calculate policy loss (cross-entropy)
-        policy_loss = F.cross_entropy(policy_logits, policy_target)
-
-        # Calculate value loss (mean squared error)
-        value_loss = F.mse_loss(value, value_target)
-
-        # Combine losses (you can adjust the weighting if needed)
-        total_loss = policy_loss + value_loss
-
-        self.log("train_loss", total_loss)  # type: ignore[arg-type]
-        self.log("policy_loss", policy_loss)  # type: ignore[arg-type]
-        self.log("value_loss", value_loss)  # type: ignore[arg-type]
-
-        return total_loss
-
-    def configure_optimizers(self):
-        return Adam(self.parameters(), lr=self.learning_rate)

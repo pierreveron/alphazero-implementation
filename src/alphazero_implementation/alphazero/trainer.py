@@ -1,7 +1,6 @@
 import lightning as L
 import numpy as np
 import torch
-from numpy.typing import NDArray
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -9,12 +8,7 @@ from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
-
-
-def list_to_tensor_numpy(grid_list: list[NDArray[np.float64]]) -> torch.Tensor:
-    stacked = np.stack(grid_list)
-    return torch.tensor(stacked, dtype=torch.float32)
-
+from alphazero_implementation.models.model import Model
 
 # GameHistory represents the trajectory of a single game
 # It is a list of tuples, where each tuple contains:
@@ -25,7 +19,7 @@ GameHistory = list[tuple[State, list[float], list[float]]]
 
 
 class AlphaZeroTrainer:
-    def __init__(self, model: L.LightningModule, mcgs_num_simulations: int = 800):
+    def __init__(self, model: Model, mcgs_num_simulations: int = 800):
         self.model = model
         self.mcgs_num_simulations = mcgs_num_simulations
 
@@ -102,11 +96,7 @@ class AlphaZeroTrainer:
                         node.game_state for node, _ in leaf_nodes
                     ]
 
-                    policies, values = self.model.forward(
-                        list_to_tensor_numpy(
-                            [state.grid for state in states_to_evaluate]  # type: ignore[arg-type]
-                        )
-                    )
+                    policies, values = self.model.predict(states_to_evaluate)
 
                     for i, (node, path) in enumerate(leaf_nodes):
                         node.action_policy = policies[i]
