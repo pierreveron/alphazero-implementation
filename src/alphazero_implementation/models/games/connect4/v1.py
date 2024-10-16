@@ -26,6 +26,9 @@ class BasicNN(Connect4Model):
         self.learning_rate = 1e-3
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+        # Move input tensor to the same device as the model
+        x = x.to(self.shared_layers[0].weight.device)
+
         x = self.flatten(x)
         shared_output = self.shared_layers(x)
 
