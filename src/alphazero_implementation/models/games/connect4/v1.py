@@ -7,7 +7,8 @@ from alphazero_implementation.models.games.connect4.connect4_model import Connec
 
 class BasicNN(Connect4Model):
     def __init__(self, height: int, width: int, max_actions: int, num_players: int):
-        super(BasicNN, self).__init__()  # type: ignore[call-arg]
+        super().__init__(height, width, max_actions, num_players)
+
         self.flatten = nn.Flatten()
         self.shared_layers = nn.Sequential(
             nn.Linear(height * width, 512),
@@ -25,6 +26,9 @@ class BasicNN(Connect4Model):
         self.learning_rate = 1e-3
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+        # Move input tensor to the same device as the model
+        x = x.to(self.shared_layers[0].weight.device)
+
         x = self.flatten(x)
         shared_output = self.shared_layers(x)
 

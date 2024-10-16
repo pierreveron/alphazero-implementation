@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 
 import lightning as L
+import torch
 import torch.nn.functional as F
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
+from torch.utils.data import TensorDataset
 
 # ActionPolicy represents a probability distribution over available actions in a given state.
 # It maps each possible action to its probability of being selected, providing a strategy
@@ -57,10 +59,6 @@ class Model(ABC, L.LightningModule):
         pass
 
     @abstractmethod
-    def _states_to_tensor(self, states: list[State]) -> Tensor:
-        pass
-
-    @abstractmethod
     def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
         """
         Predict action probabilities and state values for a list of game states.
@@ -80,4 +78,20 @@ class Model(ABC, L.LightningModule):
                 - list[ActionPolicy]: A list of dictionaries, each mapping legal actions to their probabilities.
                 - list[Value]: A list of arrays, each representing the estimated value of a state for each player.
         """
+        pass
+
+    def format_dataset(
+        self, states: list[State], policies: list[ActionPolicy], values: list[Value]
+    ) -> TensorDataset:
+        state_inputs = self._states_to_tensor(states)
+        policy_targets = self._policies_to_tensor(policies)
+        value_targets = torch.FloatTensor(values)
+        return TensorDataset(state_inputs, policy_targets, value_targets)
+
+    @abstractmethod
+    def _states_to_tensor(self, states: list[State]) -> Tensor:
+        pass
+
+    @abstractmethod
+    def _policies_to_tensor(self, policies: list[ActionPolicy]) -> Tensor:
         pass
