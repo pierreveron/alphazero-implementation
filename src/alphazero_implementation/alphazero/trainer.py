@@ -42,13 +42,13 @@ class AlphaZeroTrainer:
             roots: list[Node | None] = [
                 Node(game_state=state) for state in games if state is not None
             ]
-            nodes_by_state_list: list[dict[State, Node]] = [
-                {root.game_state: root} for root in roots if root is not None
-            ]
 
             # Monte Carlo Tree Search / Graph Search
             for _ in range(self.mcgs_num_simulations):
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
+                nodes_by_state_list: list[dict[State, Node]] = [
+                    {root.game_state: root} for root in roots if root is not None
+                ]
 
                 for root in roots:
                     if root is None:
