@@ -5,7 +5,7 @@ from alphazero_implementation.models.games.connect4.v1 import BasicNN
 
 
 def train():
-    config = Config(6, 7, 2)
+    config = Config(6, 7, 4)
     initial_state = config.sample_initial_state()
 
     model = BasicNN(
