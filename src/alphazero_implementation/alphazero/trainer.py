@@ -221,3 +221,4 @@ class AlphaZeroTrainer:
             print(f"Iteration [{iteration+1}/{num_iterations}] completed!")
 
         print("Training completed!")
+        trainer.save_checkpoint("model_checkpoint.ckpt")
