@@ -1,5 +1,6 @@
 import lightning as L
 import numpy as np
+from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch.utils.data import DataLoader
 
@@ -191,11 +192,16 @@ class AlphaZeroTrainer:
     ):
         training_data: GameHistory = []
 
+        # Create a TensorBoard logger
+        logger = TensorBoardLogger("lightning_logs", name="alphazero")
+
         trainer = L.Trainer(
             max_epochs=max_epochs,
             log_every_n_steps=10,
             enable_progress_bar=True,
+            logger=logger,  # Add the logger to the Trainer
         )
+
         # tuner = Tuner(trainer)
 
         # Deepmind's AlphaZero pseudocode continuously train the model as an optimization
