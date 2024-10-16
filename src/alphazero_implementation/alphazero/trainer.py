@@ -15,7 +15,7 @@ from alphazero_implementation.models.model import ActionPolicy, Model
 # - State: The game state at that point
 # - list[float]: The improved policy (action probabilities) for that state
 # - list[float]: The value (expected outcome) for each player at that state
-GameHistory = list[tuple[State, list[float], list[float]]]
+GameHistory = list[tuple[State, ActionPolicy, list[float]]]
 
 
 def sample_action_from_policy(policy: ActionPolicy) -> Action:
@@ -136,28 +136,32 @@ class AlphaZeroTrainer:
                 if root is None:
                     continue
                 state = root.game_state
-                visits = np.array(
-                    [
-                        root.children_and_edge_visits[action][1]
-                        if action in root.children_and_edge_visits
-                        else 0
-                        for action in state.actions
-                    ],
-                    dtype=np.float64,
-                )
-                sum_visits = np.sum(visits)
+
+                visits_per_action: dict[Action, float] = {}
+                sum_visits = 0
+                for action in state.actions:
+                    if action in root.children_and_edge_visits:
+                        visits_per_action[action] = root.children_and_edge_visits[
+                            action
+                        ][1]
+                        sum_visits += root.children_and_edge_visits[action][1]
+
                 if sum_visits > 0:
-                    improved_policy = visits / sum_visits
+                    improved_policy: ActionPolicy = {
+                        action: action_visits / sum_visits
+                        for action, action_visits in visits_per_action.items()
+                    }
                 else:
-                    # If sum_visits is 0, use a uniform distribution
-                    improved_policy = np.ones_like(visits) / len(visits)
+                    # If sum_visits is 0, use a uniform distribution on valid actions
+                    improved_policy: ActionPolicy = {
+                        action: 1 / len(state.actions) for action in state.actions
+                    }
 
                 game_histories[root_index].append(
                     (
                         state,
-                        improved_policy.tolist(),
+                        improved_policy,
                         [0 for _ in range(state.config.num_players)],
-                        # 0 is a placeholder for the value
                     )
                 )
 
