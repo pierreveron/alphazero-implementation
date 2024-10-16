@@ -5,15 +5,8 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import State  # type: ignore[import]
 from torch.utils.data import DataLoader
 
-from alphazero_implementation.mcts.agent import MCTSAgent
-from alphazero_implementation.models.model import ActionPolicy, Model
-
-# GameHistory represents the trajectory of a single game
-# It is a list of tuples, where each tuple contains:
-# - State: The game state at that point
-# - list[float]: The improved policy (action probabilities) for that state
-# - list[float]: The value (expected outcome) for each player at that state
-GameHistory = list[tuple[State, ActionPolicy, list[float]]]
+from alphazero_implementation.mcts.agent import GameHistory, MCTSAgent
+from alphazero_implementation.models.model import Model
 
 
 class AlphaZeroTrainer:

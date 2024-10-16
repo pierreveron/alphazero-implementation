@@ -1,12 +1,15 @@
 import numpy as np
-from simulator.game.connect import (
-    Action,  # type: ignore[import]
-    State,  # type: ignore[attr-defined]
-)
+from simulator.game.connect import Action, State  # type: ignore[import]
 
-from alphazero_implementation.alphazero.trainer import GameHistory
 from alphazero_implementation.mcts.mcgs import Node, select_action_according_to_puct
 from alphazero_implementation.models.model import ActionPolicy, Model
+
+# GameHistory represents the trajectory of a single game
+# It is a list of tuples, where each tuple contains:
+# - State: The game state at that point
+# - list[float]: The improved policy (action probabilities) for that state
+# - list[float]: The value (expected outcome) for each player at that state
+GameHistory = list[tuple[State, ActionPolicy, list[float]]]
 
 
 class MCTSAgent:
