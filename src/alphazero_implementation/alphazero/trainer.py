@@ -1,8 +1,7 @@
 import lightning as L
 import numpy as np
-import torch
 from simulator.game.connect import Action, State  # type: ignore[import]
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 from alphazero_implementation.mcts.mcgs import (
     Node,
@@ -207,11 +206,8 @@ class AlphaZeroTrainer:
             # TODO: remove old training data
 
             states, policies, values = zip(*training_data)
-            state_inputs = torch.FloatTensor([state.grid for state in states])
-            policy_targets = torch.FloatTensor(policies)
-            value_targets = torch.FloatTensor(values)
 
-            dataset = TensorDataset(state_inputs, policy_targets, value_targets)
+            dataset = self.model.format_dataset(states, policies, values)
             dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
             # tuner.lr_find(self.model)

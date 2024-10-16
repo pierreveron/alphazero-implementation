@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from simulator.game.connect import Action, State  # type: ignore[import]
 from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
+from torch.utils.data import TensorDataset
 
 # ActionPolicy represents a probability distribution over available actions in a given state.
 # It maps each possible action to its probability of being selected, providing a strategy
@@ -80,4 +81,10 @@ class Model(ABC, L.LightningModule):
                 - list[ActionPolicy]: A list of dictionaries, each mapping legal actions to their probabilities.
                 - list[Value]: A list of arrays, each representing the estimated value of a state for each player.
         """
+        pass
+
+    @abstractmethod
+    def format_dataset(
+        self, states: list[State], policies: list[ActionPolicy], values: list[Value]
+    ) -> TensorDataset:
         pass
