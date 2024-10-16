@@ -50,15 +50,6 @@ class AlphaZeroTrainer:
             version=f"run_{self.run_counter:03d}_iter{num_iterations}_sims{self.mcgs_num_simulations}_batch{self.mcgs_self_play_count}",
         )
 
-        trainer = L.Trainer(
-            max_epochs=max_epochs,
-            log_every_n_steps=10,
-            enable_progress_bar=True,
-            logger=logger,  # Add the logger to the Trainer
-        )
-
-        # tuner = Tuner(trainer)
-
         # Deepmind's AlphaZero pseudocode continuously train the model as an optimization
         # process, but we choose to do this in smaller batches
         for iteration in range(num_iterations):
@@ -72,6 +63,15 @@ class AlphaZeroTrainer:
             dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
             # tuner.lr_find(self.model)
+
+            trainer = L.Trainer(
+                max_epochs=max_epochs,
+                log_every_n_steps=10,
+                enable_progress_bar=True,
+                logger=logger,  # Add the logger to the Trainer
+            )
+
+            # tuner = Tuner(trainer)
 
             trainer.fit(self.model, dataloader)
 
