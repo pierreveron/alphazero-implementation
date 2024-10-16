@@ -1,3 +1,5 @@
+import os
+
 import lightning as L
 import numpy as np
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -27,6 +29,16 @@ class AlphaZeroTrainer:
     def __init__(self, model: Model, mcgs_num_simulations: int = 800):
         self.model = model
         self.mcgs_num_simulations = mcgs_num_simulations
+        self.run_counter = self.get_next_run_number()
+
+    def get_next_run_number(self):
+        base_dir = "lightning_logs/alphazero"
+        if not os.path.exists(base_dir):
+            return 1
+        existing_runs = [d for d in os.listdir(base_dir) if d.startswith("run_")]
+        if not existing_runs:
+            return 1
+        return max(int(run.split("_")[1]) for run in existing_runs) + 1
 
     def parallel_self_play(
         self,
@@ -192,8 +204,12 @@ class AlphaZeroTrainer:
     ):
         training_data: GameHistory = []
 
-        # Create a TensorBoard logger
-        logger = TensorBoardLogger("lightning_logs", name="alphazero")
+        # Create a TensorBoard logger with version name including parameters and run number as prefix
+        logger = TensorBoardLogger(
+            "lightning_logs",
+            name="alphazero",
+            version=f"run_{self.run_counter:03d}_iter{num_iterations}_sims{self.mcgs_num_simulations}_batch{self.mcgs_batch_size}",
+        )
 
         trainer = L.Trainer(
             max_epochs=max_epochs,
@@ -223,4 +239,3 @@ class AlphaZeroTrainer:
             print(f"Iteration [{iteration+1}/{num_iterations}] completed!")
 
         print("Training completed!")
-        trainer.save_checkpoint("model_checkpoint.ckpt")
