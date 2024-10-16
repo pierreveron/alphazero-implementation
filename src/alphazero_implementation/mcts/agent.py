@@ -64,45 +64,49 @@ class MCTSAgent:
             )
 
     def run_self_plays(self, initial_state: State) -> list[GameHistory]:
+        # Game histories, games and roots are parallel lists and all must be the same length
         game_histories: list[GameHistory] = [[] for _ in range(self.self_play_count)]
         games: list[State | None] = [initial_state for _ in range(self.self_play_count)]
+        print(f"Number of game histories: {len(game_histories)}")
+        print(f"Number of initial games: {len(games)}")
+        assert len(game_histories) == len(games)
+
+        num_players = initial_state.config.num_players
 
         while any(
             game is not None for game in games
         ):  # while not all(game is None for game in games):
-            print(f"Games: {games}")
+            print(
+                f"Number of games still running: {len([game for game in games if game is not None])}"
+            )
             roots: list[Node | None] = [
-                Node(game_state=state) for state in games if state is not None
+                Node(game_state=state) if state is not None else None for state in games
             ]
+            assert len(game_histories) == len(roots) == len(games)
 
             # Monte Carlo Tree Search / Graph Search
             for _ in range(self.num_simulations_per_self_play):
-                print(f"Roots: {roots}")
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
                 nodes_by_state_list: list[dict[State, Node]] = [
                     {root.game_state: root} for root in roots if root is not None
                 ]
 
                 for root in roots:
-                    print(f"Root: {root}")
                     if root is None:
                         continue
                     node: Node = root
                     path: list[tuple[Node, Action]] = []
 
                     while True:
-                        print(f"Node: {node}")
                         if node.game_state.has_ended:
                             node.U = node.game_state.reward  # type: ignore[attr-defined]
                             break
                         elif node.N == 0:  # New node not yet visited
                             leaf_nodes.append((node, path))
-                            print(f"Leaf nodes: {leaf_nodes}")
                             break
                         else:
                             # 1. Selection
                             action: Action = select_action_according_to_puct(node)
-                            print(f"Action: {action}")
                             if action not in node.children_and_edge_visits:
                                 # 2. Expansion
                                 new_game_state: State = action.sample_next_state()
@@ -134,14 +138,11 @@ class MCTSAgent:
 
                 # Evaluate leaf nodes in batch
                 if leaf_nodes:
-                    print(f"Leaf nodes: {leaf_nodes}")
                     states_to_evaluate: list[State] = [
                         node.game_state for node, _ in leaf_nodes
                     ]
 
                     policies, values = self.model.predict(states_to_evaluate)
-                    print(f"Policies: {policies}")
-                    print(f"Values: {values}")
 
                     for i, (node, path) in enumerate(leaf_nodes):
                         node.action_policy = policies[i]
@@ -153,8 +154,6 @@ class MCTSAgent:
 
             # Calculate improved policies and choose actions
             for root_index, root in enumerate(roots):
-                print(f"Root index: {root_index}")
-                print(f"Root: {root}")
                 if root is None:
                     continue
 
