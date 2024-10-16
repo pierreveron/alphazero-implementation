@@ -26,9 +26,12 @@ def sample_action_from_policy(policy: ActionPolicy) -> Action:
 
 
 class AlphaZeroTrainer:
-    def __init__(self, model: Model, mcgs_num_simulations: int = 800):
+    def __init__(
+        self, model: Model, mcgs_num_simulations: int = 800, mcgs_batch_size: int = 100
+    ):
         self.model = model
         self.mcgs_num_simulations = mcgs_num_simulations
+        self.mcgs_batch_size = mcgs_batch_size
         self.run_counter = self.get_next_run_number()
 
     def get_next_run_number(self):
@@ -42,11 +45,10 @@ class AlphaZeroTrainer:
 
     def parallel_self_play(
         self,
-        batch_size: int,
         initial_state: State,
     ) -> list[GameHistory]:
-        game_histories: list[GameHistory] = [[] for _ in range(batch_size)]
-        games: list[State | None] = [initial_state for _ in range(batch_size)]
+        game_histories: list[GameHistory] = [[] for _ in range(self.mcgs_batch_size)]
+        games: list[State | None] = [initial_state for _ in range(self.mcgs_batch_size)]
 
         while any(
             game is not None for game in games
@@ -198,7 +200,6 @@ class AlphaZeroTrainer:
     def train(
         self,
         num_iterations: int,
-        self_play_batch_size: int,
         initial_state: State,
         max_epochs: int = 100,
     ):
@@ -223,7 +224,7 @@ class AlphaZeroTrainer:
         # Deepmind's AlphaZero pseudocode continuously train the model as an optimization
         # process, but we choose to do this in smaller batches
         for iteration in range(num_iterations):
-            trajectories = self.parallel_self_play(self_play_batch_size, initial_state)
+            trajectories = self.parallel_self_play(initial_state)
             training_data.extend([item for sublist in trajectories for item in sublist])
             # TODO: remove old training data
 

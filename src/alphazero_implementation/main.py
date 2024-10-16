@@ -15,12 +15,12 @@ def train():
         num_players=config.num_players,
     )
 
-    trainer = AlphaZeroTrainer(model=model, mcgs_num_simulations=1)
+    trainer = AlphaZeroTrainer(model=model, mcgs_num_simulations=2, mcgs_batch_size=1)
 
     trainer.train(
-        num_iterations=1,
-        self_play_batch_size=1,
+        num_iterations=3,
         initial_state=initial_state,
+        max_epochs=100,
     )
 
 
