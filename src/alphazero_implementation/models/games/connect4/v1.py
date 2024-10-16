@@ -1,15 +1,14 @@
 import torch
 from simulator.game.connect import State  # type: ignore[attr-defined]
 from torch import Tensor, nn
-from torch.utils.data import TensorDataset
 
 from alphazero_implementation.models.games.connect4.connect4_model import Connect4Model
-from alphazero_implementation.models.model import ActionPolicy, Value
 
 
 class BasicNN(Connect4Model):
     def __init__(self, height: int, width: int, max_actions: int, num_players: int):
-        super(BasicNN, self).__init__()  # type: ignore[call-arg]
+        super().__init__(height, width, max_actions, num_players)
+
         self.flatten = nn.Flatten()
         self.shared_layers = nn.Sequential(
             nn.Linear(height * width, 512),
@@ -42,14 +41,6 @@ class BasicNN(Connect4Model):
         grids: list[NDArray[np.float64]] = [state.grid for state in states]  # type: ignore[attr-defined]
         stacked = np.stack(grids)
         return torch.tensor(stacked, dtype=torch.float32)
-
-    def format_dataset(
-        self, states: list[State], policies: list[ActionPolicy], values: list[Value]
-    ) -> TensorDataset:
-        state_inputs = self._states_to_tensor(states)
-        policy_targets = torch.FloatTensor(policies)
-        value_targets = torch.FloatTensor(values)
-        return TensorDataset(state_inputs, policy_targets, value_targets)
 
     # def _states_to_tensor(self, states: list[State]) -> Tensor:
     #     batch_size = len(states)
