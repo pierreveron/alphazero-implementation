@@ -8,7 +8,7 @@ from alphazero_implementation.mcts.mcgs import (
     Node,
     select_action_according_to_puct,
 )
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.model import ActionPolicy, Model
 
 # GameHistory represents the trajectory of a single game
 # It is a list of tuples, where each tuple contains:
@@ -16,6 +16,11 @@ from alphazero_implementation.models.model import Model
 # - list[float]: The improved policy (action probabilities) for that state
 # - list[float]: The value (expected outcome) for each player at that state
 GameHistory = list[tuple[State, list[float], list[float]]]
+
+
+def sample_action_from_policy(policy: ActionPolicy) -> Action:
+    index = np.random.choice(len(policy), p=list(policy.values()))
+    return list(policy.keys())[index]
 
 
 class AlphaZeroTrainer:
@@ -157,8 +162,7 @@ class AlphaZeroTrainer:
                 )
 
                 # Choose action based on the improved policy
-                action_index = np.random.choice(len(state.actions), p=improved_policy)
-                chosen_action: Action = state.actions[action_index]
+                chosen_action: Action = sample_action_from_policy(improved_policy)
                 new_state: State = chosen_action.sample_next_state()
 
                 if not new_state.has_ended:
