@@ -6,7 +6,7 @@ from simulator.game.connect import State  # type: ignore[import]
 from torch.utils.data import DataLoader
 
 from alphazero_implementation.mcts.agent import GameHistory, MCTSAgent
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.model import ActionPolicy, Model
 
 
 class AlphaZeroTrainer:
@@ -37,27 +37,31 @@ class AlphaZeroTrainer:
 
     def train(
         self,
-        num_iterations: int,
+        iterations: int,
         initial_state: State,
         max_epochs: int = 100,
     ):
-        training_data: GameHistory = []
-
         # Create a TensorBoard logger with version name including parameters and run number as prefix
         logger = TensorBoardLogger(
             "lightning_logs",
             name="alphazero",
-            version=f"run_{self.run_counter:03d}_iter{num_iterations}_sims{self.mcgs_num_simulations}_batch{self.mcgs_self_play_count}",
+            version=f"run_{self.run_counter:03d}_iter{iterations}_sims{self.mcgs_num_simulations}_batch{self.mcgs_self_play_count}",
         )
 
         # Deepmind's AlphaZero pseudocode continuously train the model as an optimization
         # process, but we choose to do this in smaller batches
-        for iteration in range(num_iterations):
-            trajectories = self.mcts_agent.run_self_plays(initial_state)
-            training_data.extend([item for sublist in trajectories for item in sublist])
-            # TODO: remove old training data
+        for iteration in range(iterations):
+            # TODO: keep some previous training data with a circular buffer
+            # For now, we'll just keep the current iteration's training data
+            batch_data: GameHistory = []
 
-            states, policies, values = zip(*training_data)
+            game_histories = self.mcts_agent.run_self_plays(initial_state)
+            batch_data.extend([item for sublist in game_histories for item in sublist])
+
+            states: list[State]
+            policies: list[ActionPolicy]
+            values: list[list[float]]
+            states, policies, values = zip(*batch_data)
 
             dataset = self.model.format_dataset(states, policies, values)
             dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
@@ -75,6 +79,6 @@ class AlphaZeroTrainer:
 
             trainer.fit(self.model, dataloader)
 
-            print(f"Iteration [{iteration+1}/{num_iterations}] completed!")
+            print(f"Iteration [{iteration+1}/{iterations}] completed!")
 
         print("Training completed!")

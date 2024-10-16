@@ -20,7 +20,7 @@ def train():
     )
 
     trainer.train(
-        num_iterations=3,
+        iterations=10,
         initial_state=initial_state,
         max_epochs=100,
     )
