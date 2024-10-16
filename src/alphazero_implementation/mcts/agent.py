@@ -165,7 +165,7 @@ class MCTSAgent:
                     (
                         state,
                         improved_policy,
-                        [0 for _ in range(state.config.num_players)],
+                        [0.0] * num_players,
                     )
                 )
 
@@ -177,12 +177,12 @@ class MCTSAgent:
                     games[root_index] = new_state
                 else:
                     games[root_index] = None
-                    final_reward = new_state.reward  # type: ignore[attr-defined]
+                    final_reward = new_state.reward.tolist()  # type: ignore[attr-defined]
+
                     # Backpropagate the final reward to all states in this game's history
-                    # Start from the last state and go backwards
-                    for j in range(len(game_histories[root_index]) - 1, -1, -1):
-                        game_histories[root_index][j] = game_histories[root_index][j][
-                            :2
-                        ] + (final_reward.tolist(),)
+                    game_history = game_histories[root_index]
+                    for i in range(len(game_history)):
+                        state, improved_policy, _ = game_history[i]
+                        game_history[i] = (state, improved_policy, final_reward)
 
         return game_histories
