@@ -43,6 +43,26 @@ class MCTSAgent:
                 for action in root.game_state.actions
             }
 
+    def backpropagate(self, path: list[tuple[Node, Action]]):
+        for parent, action in reversed(path):
+            child, edge_visits = parent.children_and_edge_visits[action]
+            parent.children_and_edge_visits[action] = (
+                child,
+                edge_visits + 1,
+            )
+
+            children_and_edge_visits = parent.children_and_edge_visits.values()
+            parent.N = 1 + sum(
+                edge_visits for (_, edge_visits) in children_and_edge_visits
+            )
+            parent.Q = (1 / parent.N) * (
+                parent.U[parent.game_state.player]
+                + sum(
+                    child.Q * edge_visits
+                    for (child, edge_visits) in children_and_edge_visits
+                )
+            )
+
     def run_self_plays(self, initial_state: State) -> list[GameHistory]:
         game_histories: list[GameHistory] = [[] for _ in range(self.self_play_count)]
         games: list[State | None] = [initial_state for _ in range(self.self_play_count)]
@@ -128,29 +148,8 @@ class MCTSAgent:
                         node.U = values[i]
 
                     # Backpropagation
-                    print("Backpropagation")
-                    for node, path in leaf_nodes:
-                        for parent, action in reversed(path):
-                            child, edge_visits = parent.children_and_edge_visits[action]
-                            parent.children_and_edge_visits[action] = (
-                                child,
-                                edge_visits + 1,
-                            )
-
-                            children_and_edge_visits = (
-                                parent.children_and_edge_visits.values()
-                            )
-                            parent.N = 1 + sum(
-                                edge_visits
-                                for (_, edge_visits) in children_and_edge_visits
-                            )
-                            parent.Q = (1 / parent.N) * (
-                                parent.U[parent.game_state.player]
-                                + sum(
-                                    child.Q * edge_visits
-                                    for (child, edge_visits) in children_and_edge_visits
-                                )
-                            )
+                    for _, path in leaf_nodes:
+                        self.backpropagate(path)
 
             # Calculate improved policies and choose actions
             for root_index, root in enumerate(roots):
