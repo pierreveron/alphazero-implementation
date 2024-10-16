@@ -21,6 +21,25 @@ class MCTSAgent:
         index = np.random.choice(len(policy), p=list(policy.values()))
         return list(policy.keys())[index]
 
+    def calculate_improved_policy(self, root: Node) -> ActionPolicy:
+        visits_per_action = {
+            action: root.children_and_edge_visits[action][1]
+            for action in root.game_state.actions
+            if action in root.children_and_edge_visits
+        }
+        sum_visits = sum(visits_per_action.values())
+
+        if sum_visits > 0:
+            return {
+                action: visits / sum_visits
+                for action, visits in visits_per_action.items()
+            }
+        else:
+            return {
+                action: 1 / len(root.game_state.actions)
+                for action in root.game_state.actions
+            }
+
     def run_self_plays(self, initial_state: State) -> list[GameHistory]:
         game_histories: list[GameHistory] = [[] for _ in range(self.self_play_count)]
         games: list[State | None] = [initial_state for _ in range(self.self_play_count)]
@@ -136,28 +155,10 @@ class MCTSAgent:
                 print(f"Root: {root}")
                 if root is None:
                     continue
+
+                improved_policy = self.calculate_improved_policy(root)
+
                 state = root.game_state
-
-                visits_per_action: dict[Action, float] = {}
-                sum_visits = 0
-                for action in state.actions:
-                    if action in root.children_and_edge_visits:
-                        visits_per_action[action] = root.children_and_edge_visits[
-                            action
-                        ][1]
-                        sum_visits += root.children_and_edge_visits[action][1]
-
-                if sum_visits > 0:
-                    improved_policy: ActionPolicy = {
-                        action: action_visits / sum_visits
-                        for action, action_visits in visits_per_action.items()
-                    }
-                else:
-                    # If sum_visits is 0, use a uniform distribution on valid actions
-                    improved_policy: ActionPolicy = {
-                        action: 1 / len(state.actions) for action in state.actions
-                    }
-
                 game_histories[root_index].append(
                     (
                         state,
