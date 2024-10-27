@@ -40,7 +40,7 @@ class AlphaZeroTrainer:
         logger = TensorBoardLogger(
             "lightning_logs",
             name="alphazero",
-            version=f"run_{self.run_counter:03d}_iter{num_iterations}_sims{self.simulations_per_episode}_batch{self.episodes_per_iter}",
+            version=f"run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}",
         )
 
         mcts_agent = MCTSAgent(
