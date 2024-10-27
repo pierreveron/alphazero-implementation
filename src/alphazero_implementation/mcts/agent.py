@@ -9,7 +9,8 @@ from alphazero_implementation.models.model import ActionPolicy, Model
 # - State: The game state at that point
 # - list[float]: The improved policy (action probabilities) for that state
 # - list[float]: The value (expected outcome) for each player at that state
-GameHistory = list[tuple[State, ActionPolicy, list[float]]]
+GameHistoryItem = tuple[State, ActionPolicy, list[float]]
+GameHistory = list[GameHistoryItem]
 
 
 class MCTSAgent:
