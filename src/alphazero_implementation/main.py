@@ -1,3 +1,6 @@
+import cProfile
+import pstats
+
 from simulator.game.connect import Config  # type: ignore[import]
 
 from alphazero_implementation.alphazero.trainer import AlphaZeroTrainer
@@ -28,35 +31,17 @@ def train():
     )
 
 
-# def play():
-#     config = Config(6, 7, 4)
-#     initial_state = config.sample_initial_state()
+def profile_train():
+    profiler = cProfile.Profile()
+    profiler.enable()
 
-#     model = BasicNN(
-#         height=config.height,
-#         width=config.width,
-#         max_actions=config.width,
-#         num_players=config.num_players,
-#     )
+    train()
 
-#     app = ExampleApp()
-#     app.run()
-
-# model.load("trained_model.pt", input_shape, num_actions)
-
-# Demonstrate using the trained model to play a game
-# print("Playing a game with the trained model...")
-# state = initial_state
-# while not state.has_ended:
-#     action = model.get_best_action(state)
-#     print(f"Chosen action: {action}")
-#     state = action.sample_next_state()
-#     print(state)  # Assuming the State class has a string representation
-
-# print("Game ended.")
-# print(f"Final state: {state}")
-# print(f"Reward: {state.reward[0]}")  # type: ignore[attr-defined]
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats("cumulative")
+    stats.print_stats(20)  # Print top 20 time-consuming functions
+    stats.dump_stats("train_profile.prof")  # Save profile results to a file
 
 
 if __name__ == "__main__":
-    train()
+    profile_train()
