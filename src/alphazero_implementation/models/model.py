@@ -26,7 +26,10 @@ class Model(ABC, L.LightningModule):
     An abstract class for a model that can be used in the MCTS simulation.
     """
 
-    learning_rate: float = 1e-3
+    def __init__(self, learning_rate: float = 1e-3):
+        super().__init__()
+        self.save_hyperparameters()  # This line saves all __init__ arguments as hyperparameters
+        self.learning_rate = learning_rate
 
     def training_step(
         self, batch: tuple[Tensor, Tensor, Tensor], batch_idx: int

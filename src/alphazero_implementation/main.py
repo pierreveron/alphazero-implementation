@@ -11,6 +11,12 @@ def train():
     config = Config(6, 7, 4)
     initial_state = config.sample_initial_state()
 
+    # Define hyperparameters
+    num_iterations = 10
+    epochs_per_iter = 10
+    simulations_per_episode = 50
+    episodes_per_iter = 10
+
     model = BasicNN(
         height=config.height,
         width=config.width,
@@ -18,15 +24,27 @@ def train():
         num_players=config.num_players,
     )
 
+    # Save hyperparameters
+    model.save_hyperparameters(
+        {
+            "training": {
+                "num_iterations": num_iterations,
+                "epochs_per_iter": epochs_per_iter,
+                "episodes_per_iter": episodes_per_iter,
+                "simulations_per_episode": simulations_per_episode,
+            }
+        }
+    )
+
     trainer = AlphaZeroTrainer(
         model=model,
-        simulations_per_episode=200,
-        episodes_per_iter=20,
+        episodes_per_iter=episodes_per_iter,
+        simulations_per_episode=simulations_per_episode,
     )
 
     trainer.train(
-        num_iterations=50,
-        epochs_per_iter=10,
+        num_iterations=num_iterations,
+        epochs_per_iter=epochs_per_iter,
         initial_state=initial_state,
     )
 
