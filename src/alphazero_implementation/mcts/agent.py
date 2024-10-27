@@ -21,14 +21,22 @@ class MCTSAgent:
         num_episodes: int,
         simulations_per_episode: int,
         initial_state: State,
+        parallel_mode: bool = False,
     ):
         self.model = model
         self.num_episodes = num_episodes
         self.simulations_per_episode = simulations_per_episode
         self.initial_state = initial_state
+        self.parallel_mode = parallel_mode
 
     @timeit
     def run(self) -> GameHistory:
+        if self.parallel_mode:
+            return self.run_in_parallel()
+        else:
+            return self.run_sequentially()
+
+    def run_sequentially(self) -> GameHistory:
         batch_data: GameHistory = []
 
         for _ in range(self.num_episodes):
@@ -36,6 +44,9 @@ class MCTSAgent:
             batch_data.extend(game_data)
 
         return batch_data
+
+    def run_in_parallel(self) -> GameHistory:
+        raise NotImplementedError("Parallel execution is not implemented yet")
 
     def sample_action_from_policy(self, policy: ActionPolicy) -> Action:
         index = np.random.choice(len(policy), p=list(policy.values()))
