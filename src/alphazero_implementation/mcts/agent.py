@@ -1,6 +1,7 @@
 import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
+from alphazero_implementation.helpers.timeit import timeit
 from alphazero_implementation.mcts.mcgs import Node, select_action_according_to_puct
 from alphazero_implementation.models.model import ActionPolicy, Model
 
@@ -26,6 +27,7 @@ class MCTSAgent:
         self.simulations_per_episode = simulations_per_episode
         self.initial_state = initial_state
 
+    @timeit
     def run(self) -> GameHistory:
         batch_data: GameHistory = []
 
