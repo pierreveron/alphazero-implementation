@@ -14,11 +14,25 @@ GameHistory = list[tuple[State, ActionPolicy, list[float]]]
 
 class MCTSAgent:
     def __init__(
-        self, model: Model, self_play_count: int, num_simulations_per_self_play: int
+        self,
+        model: Model,
+        num_episodes: int,
+        simulations_per_episode: int,
+        initial_state: State,
     ):
         self.model = model
-        self.self_play_count = self_play_count
-        self.num_simulations_per_self_play = num_simulations_per_self_play
+        self.num_episodes = num_episodes
+        self.simulations_per_episode = simulations_per_episode
+        self.initial_state = initial_state
+
+    def run(self) -> GameHistory:
+        batch_data: GameHistory = []
+
+        for _ in range(self.num_episodes):
+            game_data = self.self_play(self.initial_state)
+            batch_data.extend(game_data)
+
+        return batch_data
 
     def sample_action_from_policy(self, policy: ActionPolicy) -> Action:
         index = np.random.choice(len(policy), p=list(policy.values()))
@@ -63,13 +77,13 @@ class MCTSAgent:
                 )
             )
 
-    def self_play(self, initial_state: State, num_playouts: int):
+    def self_play(self, initial_state: State) -> GameHistory:
         game_data: GameHistory = []
         current_node = Node(game_state=initial_state)
         nodes_by_state: dict[State, Node] = {initial_state: current_node}
         while not current_node.game_state.has_ended:
             # Run MCTS to get policy
-            for _ in range(num_playouts):
+            for _ in range(self.simulations_per_episode):
                 self.perform_one_playout_recursively(current_node, nodes_by_state)
 
             # Get policy as a probability distribution
@@ -178,8 +192,8 @@ class MCTSAgent:
 
     def run_self_plays(self, initial_state: State) -> list[GameHistory]:
         # Game histories, games and roots are parallel lists and all must be the same length
-        game_histories: list[GameHistory] = [[] for _ in range(self.self_play_count)]
-        games: list[State | None] = [initial_state for _ in range(self.self_play_count)]
+        game_histories: list[GameHistory] = [[] for _ in range(self.num_episodes)]
+        games: list[State | None] = [initial_state for _ in range(self.num_episodes)]
         print(f"Number of game histories: {len(game_histories)}")
         print(f"Number of initial games: {len(games)}")
         assert len(game_histories) == len(games)
@@ -198,7 +212,7 @@ class MCTSAgent:
             assert len(game_histories) == len(roots) == len(games)
 
             # Monte Carlo Tree Search / Graph Search
-            for _ in range(self.num_simulations_per_self_play):
+            for _ in range(self.simulations_per_episode):
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
                 nodes_by_state_list: list[dict[State, Node]] = [
                     {root.game_state: root} for root in roots if root is not None

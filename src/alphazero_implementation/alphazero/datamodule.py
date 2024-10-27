@@ -12,33 +12,23 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self,
         model: Model,
         agent: MCTSAgent,
-        initial_state: State,
-        num_playouts: int,
-        games_per_iteration: int,
         batch_size: int = 32,
-        num_workers: int = 7,
+        shuffle: bool = True,
+        num_workers: int = 8,
+        persistent_workers: bool = True,
     ):
         super().__init__()
         self.model = model
         self.agent = agent
-        self.initial_state = initial_state
-        self.num_playouts = num_playouts
-        self.games_per_iteration = games_per_iteration
         self.batch_size = batch_size
+        self.shuffle = shuffle
         self.num_workers = num_workers
+        self.persistent_workers = persistent_workers
 
     def train_dataloader(
         self,
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
-        batch_data: GameHistory = []
-
-        # Generate one iteration of games
-        for _ in range(self.games_per_iteration):
-            game_data = self.agent.self_play(
-                self.initial_state,
-                self.num_playouts,
-            )
-            batch_data.extend(game_data)
+        batch_data: GameHistory = self.agent.run()
 
         states: list[State]
         policies: list[ActionPolicy]
@@ -46,14 +36,11 @@ class AlphaZeroDataModule(L.LightningDataModule):
         states, policies, values = zip(*batch_data)
 
         dataset = self.model.format_dataset(states, policies, values)
-        return DataLoader(
-            dataset,
-            batch_size=32,
-            shuffle=True,
-            num_workers=self.num_workers,
-            persistent_workers=True,
-        )
 
         return DataLoader(
-            dataset, batch_size=self.batch_size, num_workers=self.num_workers
+            dataset,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
         )

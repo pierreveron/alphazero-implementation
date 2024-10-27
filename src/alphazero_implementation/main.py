@@ -16,13 +16,15 @@ def train():
     )
 
     trainer = AlphaZeroTrainer(
-        model=model, mcgs_num_simulations=100, games_per_iteration=50
+        model=model,
+        simulations_per_episode=200,
+        episodes_per_iter=20,
     )
 
     trainer.train(
-        iterations=100,
+        num_iterations=50,
+        epochs_per_iter=10,
         initial_state=initial_state,
-        num_playouts=10,
     )
 
 
@@ -57,5 +59,4 @@ def train():
 
 
 if __name__ == "__main__":
-    # play()
     train()

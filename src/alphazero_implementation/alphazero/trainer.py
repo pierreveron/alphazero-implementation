@@ -13,20 +13,15 @@ class AlphaZeroTrainer:
     def __init__(
         self,
         model: Model,
-        mcgs_num_simulations: int = 800,
-        games_per_iteration: int = 100,
+        episodes_per_iter: int = 100,
+        simulations_per_episode: int = 800,
     ):
         self.model = model
-        self.mcgs_num_simulations = mcgs_num_simulations
-        self.games_per_iteration = games_per_iteration
-        self.run_counter = self.get_next_run_number()
-        self.mcts_agent = MCTSAgent(
-            model=self.model,
-            self_play_count=self.games_per_iteration,
-            num_simulations_per_self_play=self.mcgs_num_simulations,
-        )
+        self.simulations_per_episode = simulations_per_episode
+        self.episodes_per_iter = episodes_per_iter
+        self.run_counter = self._get_next_run_number()
 
-    def get_next_run_number(self):
+    def _get_next_run_number(self):
         base_dir = "lightning_logs/alphazero"
         if not os.path.exists(base_dir):
             return 1
@@ -37,33 +32,37 @@ class AlphaZeroTrainer:
 
     def train(
         self,
-        iterations: int,
+        num_iterations: int,
+        epochs_per_iter: int,
         initial_state: State,
-        num_playouts: int,
     ):
         # Create logger
         logger = TensorBoardLogger(
             "lightning_logs",
             name="alphazero",
-            version=f"run_{self.run_counter:03d}_iter{iterations}_sims{self.mcgs_num_simulations}_batch{self.games_per_iteration}",
+            version=f"run_{self.run_counter:03d}_iter{num_iterations}_sims{self.simulations_per_episode}_batch{self.episodes_per_iter}",
+        )
+
+        mcts_agent = MCTSAgent(
+            model=self.model,
+            num_episodes=self.episodes_per_iter,
+            simulations_per_episode=self.simulations_per_episode,
+            initial_state=initial_state,
         )
 
         # Create data module
         datamodule = AlphaZeroDataModule(
             model=self.model,
-            agent=self.mcts_agent,
-            initial_state=initial_state,
-            num_playouts=num_playouts,
-            games_per_iteration=self.games_per_iteration,
+            agent=mcts_agent,
         )
 
         # Create trainer
         trainer = L.Trainer(
-            max_epochs=iterations,  # Now each epoch represents one iteration
+            max_epochs=num_iterations * epochs_per_iter,
             log_every_n_steps=1,
             enable_progress_bar=True,
             logger=logger,
-            reload_dataloaders_every_n_epochs=1,
+            reload_dataloaders_every_n_epochs=epochs_per_iter,
         )
 
         # Train the model
