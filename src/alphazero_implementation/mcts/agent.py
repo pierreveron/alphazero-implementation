@@ -46,7 +46,13 @@ class MCTSAgent:
         return batch_data
 
     def run_in_parallel(self) -> GameHistory:
-        raise NotImplementedError("Parallel execution is not implemented yet")
+        batch_data: GameHistory = []
+
+        data = self.batch_self_play(self.initial_state)
+
+        for game_data in data:
+            batch_data.extend(game_data)
+        return batch_data
 
     def sample_action_from_policy(self, policy: ActionPolicy) -> Action:
         index = np.random.choice(len(policy), p=list(policy.values()))
@@ -204,7 +210,7 @@ class MCTSAgent:
 
         self.backpropagate(path)
 
-    def run_self_plays(self, initial_state: State) -> list[GameHistory]:
+    def batch_self_play(self, initial_state: State) -> list[GameHistory]:
         # Game histories, games and roots are parallel lists and all must be the same length
         game_histories: list[GameHistory] = [[] for _ in range(self.num_episodes)]
         games: list[State | None] = [initial_state for _ in range(self.num_episodes)]
