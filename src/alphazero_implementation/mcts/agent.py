@@ -84,7 +84,8 @@ class MCTSAgent:
         while not current_node.game_state.has_ended:
             # Run MCTS to get policy
             for _ in range(self.simulations_per_episode):
-                self.mcts_search_recursive(current_node, nodes_by_state)
+                # self.mcts_search_recursive(current_node, nodes_by_state)
+                self.mcts_search(current_node, nodes_by_state)
 
             # Get policy as a probability distribution
             policy = {
@@ -195,22 +196,34 @@ class MCTSAgent:
                         nodes_by_state[new_game_state] = child
 
                     node.children_and_edge_visits[action] = (child, 0)
-                    path.append((node, action))
-                    node = child
-                    break
                 else:
                     child = node.children_and_edge_visits[action][0]
-                    path.append((node, action))
-                    node = child
+                path.append((node, action))
+                node = child
 
+        # Now backpropagate the values along the path
+        # First, set N and Q for the leaf node
+        node.visit_count = 1
+        node.cumulative_value = node.utility_values[node.game_state.player]
+
+        # Backpropagate from the leaf node up to the root
         for parent, action in reversed(path):
             # Update edge visits
             child, edge_visits = parent.children_and_edge_visits[action]
             parent.children_and_edge_visits[action] = (child, edge_visits + 1)
 
-            # Increment visit count and cumulative value
-            parent.visit_count += 1
-            parent.cumulative_value += value
+            # Update visit count and cumulative value
+            children_and_edge_visits = parent.children_and_edge_visits.values()
+            parent.visit_count = 1 + sum(
+                edge_visits for (_, edge_visits) in children_and_edge_visits
+            )
+            parent.cumulative_value = (1 / parent.visit_count) * (
+                parent.utility_values[parent.game_state.player]
+                + sum(
+                    child.cumulative_value * edge_visits
+                    for (child, edge_visits) in children_and_edge_visits
+                )
+            )
 
     def batch_self_play(self, initial_state: State) -> list[GameHistory]:
         # Game histories, games and roots are parallel lists and all must be the same length
