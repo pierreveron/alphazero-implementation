@@ -155,10 +155,11 @@ class MCTSAgent:
 
     def backpropagate(self, path: list[tuple[Node, Action]]):
         for parent, action in reversed(path):
+            # Update edge visits
             child, edge_visits = parent.children_and_edge_visits[action]
             parent.children_and_edge_visits[action] = (child, edge_visits + 1)
 
-            # Update statistics
+            # Update visit count and cumulative value
             children_and_edge_visits = parent.children_and_edge_visits.values()
             parent.visit_count = 1 + sum(
                 edge_visits for (_, edge_visits) in children_and_edge_visits
@@ -207,23 +208,7 @@ class MCTSAgent:
         node.cumulative_value = node.utility_values[node.game_state.player]
 
         # Backpropagate from the leaf node up to the root
-        for parent, action in reversed(path):
-            # Update edge visits
-            child, edge_visits = parent.children_and_edge_visits[action]
-            parent.children_and_edge_visits[action] = (child, edge_visits + 1)
-
-            # Update visit count and cumulative value
-            children_and_edge_visits = parent.children_and_edge_visits.values()
-            parent.visit_count = 1 + sum(
-                edge_visits for (_, edge_visits) in children_and_edge_visits
-            )
-            parent.cumulative_value = (1 / parent.visit_count) * (
-                parent.utility_values[parent.game_state.player]
-                + sum(
-                    child.cumulative_value * edge_visits
-                    for (child, edge_visits) in children_and_edge_visits
-                )
-            )
+        self.backpropagate(path)
 
     def batch_self_play(self, initial_state: State) -> list[GameHistory]:
         # Game histories, games and roots are parallel lists and all must be the same length
