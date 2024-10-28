@@ -77,26 +77,6 @@ class MCTSAgent:
                 for action in root.game_state.actions
             }
 
-    def backpropagate(self, path: list[tuple[Node, Action]]):
-        for parent, action in reversed(path):
-            child, edge_visits = parent.children_and_edge_visits[action]
-            parent.children_and_edge_visits[action] = (
-                child,
-                edge_visits + 1,
-            )
-
-            children_and_edge_visits = parent.children_and_edge_visits.values()
-            parent.N = 1 + sum(
-                edge_visits for (_, edge_visits) in children_and_edge_visits
-            )
-            parent.Q = (1 / parent.N) * (
-                parent.U[parent.game_state.player]
-                + sum(
-                    child.Q * edge_visits
-                    for (child, edge_visits) in children_and_edge_visits
-                )
-            )
-
     def self_play(self, initial_state: State) -> GameHistory:
         game_history: GameHistory = []
         current_node = Node(game_state=initial_state)
@@ -172,42 +152,65 @@ class MCTSAgent:
             )
         )
 
+    def backpropagate(self, path: list[tuple[Node, Action]]):
+        for parent, action in reversed(path):
+            child, edge_visits = parent.children_and_edge_visits[action]
+            parent.children_and_edge_visits[action] = (child, edge_visits + 1)
+
+            # Update statistics
+            children_and_edge_visits = parent.children_and_edge_visits.values()
+            parent.visit_count = 1 + sum(
+                edge_visits for (_, edge_visits) in children_and_edge_visits
+            )
+            parent.cumulative_value = (1 / parent.visit_count) * (
+                parent.utility_values[parent.game_state.player]
+                + sum(
+                    child.cumulative_value * edge_visits
+                    for (child, edge_visits) in children_and_edge_visits
+                )
+            )
+
     def mcts_search(self, root: Node, nodes_by_state: dict[State, Node]):
         node = root
         path: list[tuple[Node, Action]] = []
 
         while True:
             if node.game_state.has_ended:
-                node.U = node.game_state.reward  # type: ignore[attr-defined]
+                node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                 break
-            elif node.N == 0:  # New node not yet visited
+            elif node.visit_count == 0:  # New node not yet visited
                 policies, values = self.model.predict([node.game_state])
                 node.action_policy = policies[0]
-                node.U = values[0]
+                node.utility_values = values[0]
                 break
             else:
-                # 1. Selection
                 action = select_action_according_to_puct(node)
                 if action not in node.children_and_edge_visits:
-                    # 2. Expansion
                     new_game_state = action.sample_next_state()
+
                     if new_game_state in nodes_by_state:
                         child = nodes_by_state[new_game_state]
-                        node.children_and_edge_visits[action] = (child, 0)
                     else:
-                        new_node = Node(game_state=new_game_state)
-                        node.children_and_edge_visits[action] = (new_node, 0)
-                        nodes_by_state[new_game_state] = new_node
-                    child = node.children_and_edge_visits[action][0]
+                        child = Node(game_state=new_game_state)
+                        nodes_by_state[new_game_state] = child
+
+                    node.children_and_edge_visits[action] = (child, 0)
                     path.append((node, action))
                     node = child
                     break
                 else:
-                    child, _ = node.children_and_edge_visits[action]
+                    child = node.children_and_edge_visits[action][0]
                     path.append((node, action))
                     node = child
 
-        self.backpropagate(path)
+        for parent, action in reversed(path):
+            # Update edge visits
+            child, edge_visits = parent.children_and_edge_visits[action]
+            parent.children_and_edge_visits[action] = (child, edge_visits + 1)
+
+            # Increment visit count and cumulative value
+            parent.visit_count += 1
+            parent.cumulative_value += value
 
     def batch_self_play(self, initial_state: State) -> list[GameHistory]:
         # Game histories, games and roots are parallel lists and all must be the same length
