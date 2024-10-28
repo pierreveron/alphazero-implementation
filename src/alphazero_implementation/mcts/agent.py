@@ -161,11 +161,13 @@ class MCTSAgent:
 
         # Update statistics
         children_and_edge_visits = node.children_and_edge_visits.values()
-        node.N = 1 + sum(edge_visits for (_, edge_visits) in children_and_edge_visits)
-        node.Q = (1 / node.N) * (
-            node.U[node.game_state.player]
+        node.visit_count = 1 + sum(
+            edge_visits for (_, edge_visits) in children_and_edge_visits
+        )
+        node.cumulative_value = (1 / node.visit_count) * (
+            node.utility_values[node.game_state.player]
             + sum(
-                child.Q * edge_visits
+                child.cumulative_value * edge_visits
                 for (child, edge_visits) in children_and_edge_visits
             )
         )
