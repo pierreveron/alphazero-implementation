@@ -28,12 +28,14 @@ class Node:
     Upper Confidence Bound (UCB) calculations and value backpropagation.
     """
 
-    def __init__(self, game_state: State, N: int = 0, Q: float = 0):
-        self.N = N
-        self.Q = Q
+    def __init__(
+        self, game_state: State, visit_count: int = 0, cumulative_value: float = 0
+    ):
+        self.visit_count = visit_count
+        self.cumulative_value = cumulative_value
         self.game_state = game_state
         self.children_and_edge_visits: dict[Action, tuple[Node, int]] = {}
-        self.U: Value = [0.0] * self.game_state.config.num_players
+        self.utility_values: Value = [0.0] * self.game_state.config.num_players
         self.action_policy: ActionPolicy = {}
 
     @property
@@ -58,7 +60,7 @@ def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
     best_value = -float("inf")
 
     # Total visit count for all actions from the current node
-    total_visits = node.N
+    total_visits = node.visit_count
 
     # action_policy, value = nn.predict([node.game_state])[0]
 
@@ -66,7 +68,7 @@ def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
     for action in node.game_state.actions:
         # Compute Q value as average utility for this action
         child_node, edge_visits = node.children_and_edge_visits.get(action, (None, 0))
-        Q_value = child_node.Q if child_node else 0.0
+        Q_value = child_node.cumulative_value if child_node else 0.0
 
         # Prior probability for this action
         P_value = node.action_policy.get(

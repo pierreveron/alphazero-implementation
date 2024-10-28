@@ -98,17 +98,17 @@ class MCTSAgent:
             )
 
     def self_play(self, initial_state: State) -> GameHistory:
-        game_data: GameHistory = []
+        game_history: GameHistory = []
         current_node = Node(game_state=initial_state)
         nodes_by_state: dict[State, Node] = {initial_state: current_node}
         while not current_node.game_state.has_ended:
             # Run MCTS to get policy
             for _ in range(self.simulations_per_episode):
-                self.perform_one_playout_recursively(current_node, nodes_by_state)
+                self.mcts_search_recursive(current_node, nodes_by_state)
 
             # Get policy as a probability distribution
             policy = {
-                action: edge_visits / (current_node.N - 1)
+                action: edge_visits / (current_node.visit_count - 1)
                 for action, (
                     _,
                     edge_visits,
@@ -116,7 +116,7 @@ class MCTSAgent:
             }
 
             # Collect data: (state, policy, outcome) where outcome will be assigned later
-            game_data.append(
+            game_history.append(
                 (
                     current_node.game_state,
                     policy,
@@ -130,36 +130,33 @@ class MCTSAgent:
 
         # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
         outcome = current_node.game_state.reward  # type: ignore[attr-defined]
-        for i in range(len(game_data)):
-            state, policy, _ = game_data[i]
-            game_data[i] = (state, policy, outcome.tolist())  # type: ignore[attr-defined]
+        for i in range(len(game_history)):
+            state, policy, _ = game_history[i]
+            game_history[i] = (state, policy, outcome.tolist())  # type: ignore[attr-defined]
 
-        return game_data
+        return game_history
 
-    def perform_one_playout_recursively(
-        self, node: Node, nodes_by_state: dict[State, Node]
-    ):
+    def mcts_search_recursive(self, node: Node, nodes_by_state: dict[State, Node]):
         if node.game_state.has_ended:
-            node.U = node.game_state.reward.tolist()  # type: ignore[attr-defined]
-        elif node.N == 0:  # New node not yet visited
-            # Get policy and value from the neural network
-            # Assuming 1 sample batch
+            node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
+        elif node.visit_count == 0:  # New node not yet visited
             policies, values = self.model.predict([node.game_state])
             node.action_policy = policies[0]
-            node.U = values[0]
+            node.utility_values = values[0]
         else:
             action = select_action_according_to_puct(node)
             if action not in node.children_and_edge_visits:
                 new_game_state = action.sample_next_state()
+
                 if new_game_state in nodes_by_state:
                     child = nodes_by_state[new_game_state]
-                    node.children_and_edge_visits[action] = (child, 0)
                 else:
-                    new_node = Node(N=0, Q=0, game_state=new_game_state)
-                    node.children_and_edge_visits[action] = (new_node, 0)
-                    nodes_by_state[new_game_state] = new_node
-            (child, edge_visits) = node.children_and_edge_visits[action]
-            self.perform_one_playout_recursively(child, nodes_by_state)
+                    child = Node(game_state=new_game_state)
+                    nodes_by_state[new_game_state] = child
+                node.children_and_edge_visits[action] = (child, 0)
+
+            child, edge_visits = node.children_and_edge_visits[action]
+            self.mcts_search_recursive(child, nodes_by_state)
             node.children_and_edge_visits[action] = (child, edge_visits + 1)
 
         # Update statistics
@@ -173,7 +170,7 @@ class MCTSAgent:
             )
         )
 
-    def perform_one_playout(self, root: Node, nodes_by_state: dict[State, Node]):
+    def mcts_search(self, root: Node, nodes_by_state: dict[State, Node]):
         node = root
         path: list[tuple[Node, Action]] = []
 
@@ -246,9 +243,9 @@ class MCTSAgent:
 
                     while True:
                         if node.game_state.has_ended:
-                            node.U = node.game_state.reward  # type: ignore[attr-defined]
+                            node.utility_values = node.game_state.reward  # type: ignore[attr-defined]
                             break
-                        elif node.N == 0:  # New node not yet visited
+                        elif node.visit_count == 0:  # New node not yet visited
                             leaf_nodes.append((node, path))
                             break
                         else:
@@ -293,7 +290,7 @@ class MCTSAgent:
 
                     for i, (node, path) in enumerate(leaf_nodes):
                         node.action_policy = policies[i]
-                        node.U = values[i]
+                        node.utility_values = values[i]
 
                     # Backpropagation
                     for _, path in leaf_nodes:
