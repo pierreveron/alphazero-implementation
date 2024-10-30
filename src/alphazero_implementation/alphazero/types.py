@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from simulator.game.connect import Action, State  # type: ignore[import]
 
@@ -28,7 +28,17 @@ class Sample:
 class Episode:
     """Represents a complete self-play game episode"""
 
-    samples: list[Sample]
+    samples: list[Sample] = field(default_factory=list)
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def add_sample(self, sample: Sample) -> None:
+        self.samples.append(sample)
+
+    @property
+    def current_state(self) -> State:
+        return self.samples[-1].state
 
 
 @dataclass
