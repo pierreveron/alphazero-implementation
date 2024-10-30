@@ -211,21 +211,14 @@ class MCTSAgent:
         self.backpropagate(path)
 
     def batch_self_play(self, initial_state: State) -> list[GameHistory]:
-        # Game histories, games and roots are parallel lists and all must be the same length
-        game_histories: list[GameHistory] = [[] for _ in range(self.num_episodes)]
-        games: list[State | None] = [initial_state for _ in range(self.num_episodes)]
-        print(f"Number of game histories: {len(game_histories)}")
-        print(f"Number of initial games: {len(games)}")
-        assert len(game_histories) == len(games)
+        game_histories: list[GameHistory] = [[]] * self.num_episodes
+        games: list[State | None] = [initial_state] * self.num_episodes
 
         num_players = initial_state.config.num_players
 
         while any(
             game is not None for game in games
         ):  # while not all(game is None for game in games):
-            print(
-                f"Number of games still running: {len([game for game in games if game is not None])}"
-            )
             roots: list[Node | None] = [
                 Node(game_state=state) if state is not None else None for state in games
             ]
@@ -238,7 +231,7 @@ class MCTSAgent:
                     {root.game_state: root} for root in roots if root is not None
                 ]
 
-                for root in roots:
+                for root_index, root in enumerate(roots):
                     if root is None:
                         continue
                     node: Node = root
@@ -246,42 +239,35 @@ class MCTSAgent:
 
                     while True:
                         if node.game_state.has_ended:
-                            node.utility_values = node.game_state.reward  # type: ignore[attr-defined]
+                            node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                             break
                         elif node.visit_count == 0:  # New node not yet visited
                             leaf_nodes.append((node, path))
                             break
                         else:
-                            # 1. Selection
                             action: Action = select_action_according_to_puct(node)
                             if action not in node.children_and_edge_visits:
-                                # 2. Expansion
                                 new_game_state: State = action.sample_next_state()
-                                if (
-                                    new_game_state
-                                    in nodes_by_state_list[roots.index(root)]
-                                ):
-                                    child: Node = nodes_by_state_list[
-                                        roots.index(root)
-                                    ][new_game_state]
-                                    node.children_and_edge_visits[action] = (child, 0)
-                                else:
-                                    new_node: Node = Node(game_state=new_game_state)
-                                    node.children_and_edge_visits[action] = (
-                                        new_node,
-                                        0,
-                                    )
-                                    nodes_by_state_list[roots.index(root)][
+                                if new_game_state in nodes_by_state_list[root_index]:
+                                    child = nodes_by_state_list[root_index][
                                         new_game_state
-                                    ] = new_node
-                                child: Node = node.children_and_edge_visits[action][0]
-                                path.append((node, action))
-                                node = child
-                                break
+                                    ]
+                                else:
+                                    child = Node(game_state=new_game_state)
+                                    nodes_by_state_list[root_index][new_game_state] = (
+                                        child
+                                    )
+
+                                node.children_and_edge_visits[action] = (child, 0)
                             else:
-                                child, _ = node.children_and_edge_visits[action]
-                                path.append((node, action))
-                                node = child
+                                child = node.children_and_edge_visits[action][0]
+                            path.append((node, action))
+                            node = child
+
+                    # Now backpropagate the values along the path
+                    # First, set N and Q for the leaf node
+                    node.visit_count = 1
+                    node.cumulative_value = node.utility_values[node.game_state.player]
 
                 # Evaluate leaf nodes in batch
                 if leaf_nodes:
