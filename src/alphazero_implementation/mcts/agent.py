@@ -1,17 +1,10 @@
 import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
-from alphazero_implementation.alphazero.types import Sample
+from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.helpers.timeit import timeit
 from alphazero_implementation.mcts.mcgs import Node, select_action_according_to_puct
 from alphazero_implementation.models.model import ActionPolicy, Model
-
-# GameHistory represents the trajectory of a single game
-# It is a list of tuples, where each tuple contains:
-# - State: The game state at that point
-# - list[float]: The improved policy (action probabilities) for that state
-# - list[float]: The value (expected outcome) for each player at that state
-GameHistory = list[Sample]
 
 
 class MCTSAgent:
@@ -30,29 +23,23 @@ class MCTSAgent:
         self.parallel_mode = parallel_mode
 
     @timeit
-    def run(self) -> GameHistory:
+    def run(self) -> list[Episode]:
         if self.parallel_mode:
             return self.run_in_parallel()
         else:
             return self.run_sequentially()
 
-    def run_sequentially(self) -> GameHistory:
-        batch_data: GameHistory = []
+    def run_sequentially(self) -> list[Episode]:
+        episodes: list[Episode] = []
 
         for _ in range(self.num_episodes):
-            game_data = self.self_play(self.initial_state)
-            batch_data.extend(game_data)
+            episodes.append(self.self_play(self.initial_state))
 
-        return batch_data
+        return episodes
 
-    def run_in_parallel(self) -> GameHistory:
-        batch_data: GameHistory = []
-
-        data = self.batch_self_play(self.initial_state)
-
-        for game_data in data:
-            batch_data.extend(game_data)
-        return batch_data
+    def run_in_parallel(self) -> list[Episode]:
+        episodes = self.batch_self_play(self.initial_state)
+        return episodes
 
     def sample_action_from_policy(self, policy: ActionPolicy) -> Action:
         index = np.random.choice(len(policy), p=list(policy.values()))
@@ -77,8 +64,8 @@ class MCTSAgent:
                 for action in root.game_state.actions
             }
 
-    def self_play(self, initial_state: State) -> GameHistory:
-        game_history: GameHistory = []
+    def self_play(self, initial_state: State) -> Episode:
+        game_history: list[Sample] = []
         current_node = Node(game_state=initial_state)
         nodes_by_state: dict[State, Node] = {initial_state: current_node}
         while not current_node.game_state.has_ended:
@@ -114,7 +101,7 @@ class MCTSAgent:
         for i in range(len(game_history)):
             game_history[i].value = outcome.tolist()  # type: ignore[attr-defined]
 
-        return game_history
+        return Episode(samples=game_history)
 
     def mcts_search_recursive(self, node: Node, nodes_by_state: dict[State, Node]):
         if node.game_state.has_ended:
@@ -209,8 +196,8 @@ class MCTSAgent:
         # Backpropagate from the leaf node up to the root
         self.backpropagate(path)
 
-    def batch_self_play(self, initial_state: State) -> list[GameHistory]:
-        game_histories: list[GameHistory] = [[]] * self.num_episodes
+    def batch_self_play(self, initial_state: State) -> list[Episode]:
+        game_histories: list[list[Sample]] = [[]] * self.num_episodes
         games: list[State | None] = [initial_state] * self.num_episodes
 
         num_players = initial_state.config.num_players
@@ -315,4 +302,4 @@ class MCTSAgent:
                     for i in range(len(game_history)):
                         game_history[i].value = final_reward
 
-        return game_histories
+        return [Episode(samples=game_history) for game_history in game_histories]

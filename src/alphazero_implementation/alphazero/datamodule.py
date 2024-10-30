@@ -5,9 +5,9 @@ import torch
 from simulator.game.connect import State  # type: ignore[import]
 from torch.utils.data import DataLoader
 
-from alphazero_implementation.alphazero.types import Sample
-from alphazero_implementation.mcts.agent import GameHistory, MCTSAgent
-from alphazero_implementation.models.model import ActionPolicy, Model
+from alphazero_implementation.alphazero.types import ActionPolicy, Episode, Sample
+from alphazero_implementation.mcts.agent import MCTSAgent
+from alphazero_implementation.models.model import Model
 
 
 class AlphaZeroDataModule(L.LightningDataModule):
@@ -35,10 +35,11 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self,
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
         # Generate new game data
-        new_data: GameHistory = self.agent.run()
+        episodes: list[Episode] = self.agent.run()
 
         # Add new data to the buffer
-        self.buffer.extend(new_data)
+        for episode in episodes:
+            self.buffer.extend(episode.samples)
 
         states: list[State]
         policies: list[ActionPolicy]

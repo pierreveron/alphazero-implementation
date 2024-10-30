@@ -3,22 +3,12 @@ from abc import ABC, abstractmethod
 import lightning as L
 import torch
 import torch.nn.functional as F
-from simulator.game.connect import Action, State  # type: ignore[import]
+from simulator.game.connect import State  # type: ignore[import]
 from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
 from torch.utils.data import TensorDataset
 
-# ActionPolicy represents a probability distribution over available actions in a given state.
-# It maps each possible action to its probability of being selected, providing a strategy
-# for action selection based on the current game state.
-ActionPolicy = dict[Action, float]
-
-
-# Value represents the estimated value of a game state for each player.
-# It is a list of floating-point numbers, where each element corresponds
-# to the expected outcome or utility for a specific player in the current game state.
-# The list's length matches the number of players in the game.
-Value = list[float]
+from alphazero_implementation.alphazero.types import ActionPolicy, Value
 
 
 class Model(ABC, L.LightningModule):
