@@ -65,7 +65,7 @@ class MCTSAgent:
             }
 
     def self_play(self, initial_state: State) -> Episode:
-        game_history: list[Sample] = []
+        episode = Episode()
         current_node = Node(game_state=initial_state)
         nodes_by_state: dict[State, Node] = {initial_state: current_node}
         while not current_node.game_state.has_ended:
@@ -84,7 +84,7 @@ class MCTSAgent:
             }
 
             # Collect data: (state, policy, outcome) where outcome will be assigned later
-            game_history.append(
+            episode.add_sample(
                 Sample(
                     current_node.game_state,
                     policy,
@@ -98,10 +98,11 @@ class MCTSAgent:
 
         # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
         outcome = current_node.game_state.reward  # type: ignore[attr-defined]
-        for i in range(len(game_history)):
-            game_history[i].value = outcome.tolist()  # type: ignore[attr-defined]
+        episode_history = episode.samples
+        for i in range(len(episode_history)):
+            episode_history[i].value = outcome.tolist()  # type: ignore[attr-defined]
 
-        return Episode(samples=game_history)
+        return episode
 
     def mcts_search_recursive(self, node: Node, nodes_by_state: dict[State, Node]):
         if node.game_state.has_ended:
@@ -197,52 +198,48 @@ class MCTSAgent:
         self.backpropagate(path)
 
     def batch_self_play(self, initial_state: State) -> list[Episode]:
-        game_histories: list[list[Sample]] = [[]] * self.num_episodes
-        games: list[State | None] = [initial_state] * self.num_episodes
-
         num_players = initial_state.config.num_players
+        episodes = [Episode() for _ in range(self.num_episodes)]
+        current_nodes: list[Node] = [
+            Node(game_state=initial_state) for _ in range(self.num_episodes)
+        ]
 
-        while any(
-            game is not None for game in games
-        ):  # while not all(game is None for game in games):
-            roots: list[Node | None] = [
-                Node(game_state=state) if state is not None else None for state in games
-            ]
-            assert len(game_histories) == len(roots) == len(games)
+        nodes_by_state_list: list[dict[State, Node]] = [
+            {node.game_state: node} for node in current_nodes
+        ]
 
+        while any(not node.game_state.has_ended for node in current_nodes):
             # Monte Carlo Tree Search / Graph Search
             for _ in range(self.simulations_per_episode):
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
-                nodes_by_state_list: list[dict[State, Node]] = [
-                    {root.game_state: root} for root in roots if root is not None
-                ]
 
-                for root_index, root in enumerate(roots):
-                    if root is None:
+                for current_node_index, current_node in enumerate(current_nodes):
+                    if current_node.game_state.has_ended:
                         continue
-                    node: Node = root
+
+                    node: Node = current_node
                     path: list[tuple[Node, Action]] = []
+                    nodes_by_state = nodes_by_state_list[current_node_index]
 
                     while True:
                         if node.game_state.has_ended:
                             node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
+                            # Add terminal nodes to leaf_nodes for backpropagation
+                            leaf_nodes.append((node, path))
                             break
                         elif node.visit_count == 0:  # New node not yet visited
                             leaf_nodes.append((node, path))
                             break
                         else:
-                            action: Action = select_action_according_to_puct(node)
+                            action = select_action_according_to_puct(node)
                             if action not in node.children_and_edge_visits:
-                                new_game_state: State = action.sample_next_state()
-                                if new_game_state in nodes_by_state_list[root_index]:
-                                    child = nodes_by_state_list[root_index][
-                                        new_game_state
-                                    ]
+                                new_game_state = action.sample_next_state()
+
+                                if new_game_state in nodes_by_state:
+                                    child = nodes_by_state[new_game_state]
                                 else:
                                     child = Node(game_state=new_game_state)
-                                    nodes_by_state_list[root_index][new_game_state] = (
-                                        child
-                                    )
+                                    nodes_by_state[new_game_state] = child
 
                                 node.children_and_edge_visits[action] = (child, 0)
                             else:
@@ -250,56 +247,69 @@ class MCTSAgent:
                             path.append((node, action))
                             node = child
 
-                    # Now backpropagate the values along the path
-                    # First, set N and Q for the leaf node
-                    node.visit_count = 1
-                    node.cumulative_value = node.utility_values[node.game_state.player]
-
                 # Evaluate leaf nodes in batch
                 if leaf_nodes:
-                    states_to_evaluate: list[State] = [
-                        node.game_state for node, _ in leaf_nodes
+                    non_terminal_nodes = [
+                        (node, path)
+                        for node, path in leaf_nodes
+                        if not node.game_state.has_ended
                     ]
 
-                    policies, values = self.model.predict(states_to_evaluate)
+                    # Handle non-terminal nodes with neural network
+                    if non_terminal_nodes:
+                        states_to_evaluate = [
+                            node.game_state for node, _ in non_terminal_nodes
+                        ]
+                        policies, values = self.model.predict(states_to_evaluate)
 
-                    for i, (node, path) in enumerate(leaf_nodes):
-                        node.action_policy = policies[i]
-                        node.utility_values = values[i]
+                        for i, (node, _) in enumerate(non_terminal_nodes):
+                            node.action_policy = policies[i]
+                            node.utility_values = values[i]
 
-                    # Backpropagation
+                    # Set visit count and cumulative value for all leaf nodes
+                    for node, _ in leaf_nodes:
+                        node.visit_count = 1
+                        node.cumulative_value = node.utility_values[
+                            node.game_state.player
+                        ]
+
+                    # Backpropagate all paths
                     for _, path in leaf_nodes:
                         self.backpropagate(path)
 
             # Calculate improved policies and choose actions
-            for root_index, root in enumerate(roots):
-                if root is None:
+            for current_node_index, current_node in enumerate(current_nodes):
+                if current_node.game_state.has_ended:
                     continue
 
-                improved_policy = self.calculate_improved_policy(root)
+                # policy = self.calculate_improved_policy(current_node)
+                # Get policy as a probability distribution
+                policy = {
+                    action: edge_visits / (current_node.visit_count - 1)
+                    for action, (
+                        _,
+                        edge_visits,
+                    ) in current_node.children_and_edge_visits.items()
+                }
 
-                state = root.game_state
-                game_histories[root_index].append(
+                episodes[current_node_index].add_sample(
                     Sample(
-                        state,
-                        improved_policy,
+                        current_node.game_state,
+                        policy,
                         [0.0] * num_players,
                     )
                 )
 
                 # Choose action based on the improved policy
-                chosen_action: Action = self.sample_action_from_policy(improved_policy)
-                new_state: State = chosen_action.sample_next_state()
+                action = self.sample_action_from_policy(policy)
+                new_current_node = current_node.children_and_edge_visits[action][0]
+                current_nodes[current_node_index] = new_current_node
 
-                if not new_state.has_ended:
-                    games[root_index] = new_state
-                else:
-                    games[root_index] = None
-                    final_reward = new_state.reward.tolist()  # type: ignore[attr-defined]
+        for current_node_index, current_node in enumerate(current_nodes):
+            # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
+            outcome = current_node.game_state.reward  # type: ignore[attr-defined]
+            episode_history = episodes[current_node_index].samples
+            for i in range(len(episode_history)):
+                episode_history[i].value = outcome.tolist()  # type: ignore[attr-defined]
 
-                    # Backpropagate the final reward to all states in this game's history
-                    game_history = game_histories[root_index]
-                    for i in range(len(game_history)):
-                        game_history[i].value = final_reward
-
-        return [Episode(samples=game_history) for game_history in game_histories]
+        return episodes
