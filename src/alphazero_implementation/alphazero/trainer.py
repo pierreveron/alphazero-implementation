@@ -48,6 +48,7 @@ class AlphaZeroTrainer:
             num_episodes=self.episodes_per_iter,
             simulations_per_episode=self.simulations_per_episode,
             initial_state=initial_state,
+            parallel_mode=True,
         )
 
         # Create data module
