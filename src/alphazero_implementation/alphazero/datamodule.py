@@ -2,10 +2,9 @@ from collections import deque
 
 import lightning as L
 import torch
-from simulator.game.connect import State  # type: ignore[import]
 from torch.utils.data import DataLoader
 
-from alphazero_implementation.alphazero.types import ActionPolicy, Episode, Sample
+from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.mcts.agent import MCTSAgent
 from alphazero_implementation.models.model import Model
 
@@ -41,10 +40,9 @@ class AlphaZeroDataModule(L.LightningDataModule):
         for episode in episodes:
             self.buffer.extend(episode.samples)
 
-        states: list[State]
-        policies: list[ActionPolicy]
-        values: list[list[float]]
-        states, policies, values = zip(*self.buffer)
+        states = [sample.state for sample in self.buffer]
+        policies = [sample.policy for sample in self.buffer]
+        values = [sample.value for sample in self.buffer]
 
         dataset = self.model.format_dataset(states, policies, values)
 
