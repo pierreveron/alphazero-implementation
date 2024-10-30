@@ -5,7 +5,8 @@ import torch
 from simulator.game.connect import State  # type: ignore[import]
 from torch.utils.data import DataLoader
 
-from alphazero_implementation.mcts.agent import GameHistory, GameHistoryItem, MCTSAgent
+from alphazero_implementation.alphazero.types import Sample
+from alphazero_implementation.mcts.agent import GameHistory, MCTSAgent
 from alphazero_implementation.models.model import ActionPolicy, Model
 
 
@@ -28,7 +29,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self.num_workers = num_workers
         self.persistent_workers = persistent_workers
         self.buffer_size = buffer_size
-        self.buffer: deque[GameHistoryItem] = deque(maxlen=buffer_size)
+        self.buffer: deque[Sample] = deque(maxlen=buffer_size)
 
     def train_dataloader(
         self,

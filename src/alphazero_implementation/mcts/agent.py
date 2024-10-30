@@ -1,6 +1,7 @@
 import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
+from alphazero_implementation.alphazero.types import Sample
 from alphazero_implementation.helpers.timeit import timeit
 from alphazero_implementation.mcts.mcgs import Node, select_action_according_to_puct
 from alphazero_implementation.models.model import ActionPolicy, Model
@@ -10,8 +11,7 @@ from alphazero_implementation.models.model import ActionPolicy, Model
 # - State: The game state at that point
 # - list[float]: The improved policy (action probabilities) for that state
 # - list[float]: The value (expected outcome) for each player at that state
-GameHistoryItem = tuple[State, ActionPolicy, list[float]]
-GameHistory = list[GameHistoryItem]
+GameHistory = list[Sample]
 
 
 class MCTSAgent:
@@ -98,7 +98,7 @@ class MCTSAgent:
 
             # Collect data: (state, policy, outcome) where outcome will be assigned later
             game_history.append(
-                (
+                Sample(
                     current_node.game_state,
                     policy,
                     [0.0] * initial_state.config.num_players,
@@ -112,8 +112,7 @@ class MCTSAgent:
         # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
         outcome = current_node.game_state.reward  # type: ignore[attr-defined]
         for i in range(len(game_history)):
-            state, policy, _ = game_history[i]
-            game_history[i] = (state, policy, outcome.tolist())  # type: ignore[attr-defined]
+            game_history[i].value = outcome.tolist()  # type: ignore[attr-defined]
 
         return game_history
 
@@ -294,7 +293,7 @@ class MCTSAgent:
 
                 state = root.game_state
                 game_histories[root_index].append(
-                    (
+                    Sample(
                         state,
                         improved_policy,
                         [0.0] * num_players,
@@ -314,7 +313,6 @@ class MCTSAgent:
                     # Backpropagate the final reward to all states in this game's history
                     game_history = game_histories[root_index]
                     for i in range(len(game_history)):
-                        state, improved_policy, _ = game_history[i]
-                        game_history[i] = (state, improved_policy, final_reward)
+                        game_history[i].value = final_reward
 
         return game_histories
