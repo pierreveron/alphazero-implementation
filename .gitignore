@@ -15,3 +15,8 @@
 
 # Pytorch lightning logs
 lightning_logs/
+
+# Pytorch model weights
+*.pt
+*.pth
+*.ckpt

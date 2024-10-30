@@ -1,22 +1,14 @@
 from abc import ABC, abstractmethod
 
 import lightning as L
+import torch
 import torch.nn.functional as F
-from simulator.game.connect import Action, State  # type: ignore[import]
+from simulator.game.connect import State  # type: ignore[import]
 from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
+from torch.utils.data import TensorDataset
 
-# ActionPolicy represents a probability distribution over available actions in a given state.
-# It maps each possible action to its probability of being selected, providing a strategy
-# for action selection based on the current game state.
-ActionPolicy = dict[Action, float]
-
-
-# Value represents the estimated value of a game state for each player.
-# It is a list of floating-point numbers, where each element corresponds
-# to the expected outcome or utility for a specific player in the current game state.
-# The list's length matches the number of players in the game.
-Value = list[float]
+from alphazero_implementation.alphazero.types import ActionPolicy, Value
 
 
 class Model(ABC, L.LightningModule):
@@ -24,7 +16,10 @@ class Model(ABC, L.LightningModule):
     An abstract class for a model that can be used in the MCTS simulation.
     """
 
-    learning_rate: float = 1e-3
+    def __init__(self, learning_rate: float = 1e-3):
+        super().__init__()
+        self.save_hyperparameters()  # This line saves all __init__ arguments as hyperparameters
+        self.learning_rate = learning_rate
 
     def training_step(
         self, batch: tuple[Tensor, Tensor, Tensor], batch_idx: int
@@ -57,10 +52,6 @@ class Model(ABC, L.LightningModule):
         pass
 
     @abstractmethod
-    def _states_to_tensor(self, states: list[State]) -> Tensor:
-        pass
-
-    @abstractmethod
     def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
         """
         Predict action probabilities and state values for a list of game states.
@@ -80,4 +71,20 @@ class Model(ABC, L.LightningModule):
                 - list[ActionPolicy]: A list of dictionaries, each mapping legal actions to their probabilities.
                 - list[Value]: A list of arrays, each representing the estimated value of a state for each player.
         """
+        pass
+
+    def format_dataset(
+        self, states: list[State], policies: list[ActionPolicy], values: list[Value]
+    ) -> TensorDataset:
+        state_inputs = self._states_to_tensor(states)
+        policy_targets = self._policies_to_tensor(policies)
+        value_targets = torch.FloatTensor(values)
+        return TensorDataset(state_inputs, policy_targets, value_targets)
+
+    @abstractmethod
+    def _states_to_tensor(self, states: list[State]) -> Tensor:
+        pass
+
+    @abstractmethod
+    def _policies_to_tensor(self, policies: list[ActionPolicy]) -> Tensor:
         pass

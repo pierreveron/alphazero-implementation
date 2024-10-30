@@ -1,6 +1,5 @@
 import math
 
-import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
 from alphazero_implementation.models.model import ActionPolicy, Value
@@ -29,12 +28,14 @@ class Node:
     Upper Confidence Bound (UCB) calculations and value backpropagation.
     """
 
-    def __init__(self, game_state: State, N: int = 0, Q: float = 0):
-        self.N = N
-        self.Q = Q
+    def __init__(
+        self, game_state: State, visit_count: int = 0, cumulative_value: float = 0
+    ):
+        self.visit_count = visit_count
+        self.cumulative_value = cumulative_value
         self.game_state = game_state
         self.children_and_edge_visits: dict[Action, tuple[Node, int]] = {}
-        self.U: Value = np.zeros(self.game_state.config.num_players)
+        self.utility_values: Value = [0.0] * self.game_state.config.num_players
         self.action_policy: ActionPolicy = {}
 
     @property
@@ -55,30 +56,31 @@ def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
     """
 
     # Initialize variables to store the best action and its corresponding value
-    best_action: Action
+    best_action: Action | None = None
     best_value = -float("inf")
 
     # Total visit count for all actions from the current node
-    # total_visits= sum(node.N(n, b) for b in node.game_state.actions)
-    total_visits = node.N
+    total_visits = node.visit_count
 
     # action_policy, value = nn.predict([node.game_state])[0]
 
     # Loop through each action and compute its PUCT value
     for action in node.game_state.actions:
-        # Compute the Q value for this action (expected utility)
-        Q_value = node.U[node.game_state.player]
+        # Compute Q value as average utility for this action
+        child_node, edge_visits = node.children_and_edge_visits.get(action, (None, 0))
+        Q_value = child_node.cumulative_value if child_node else 0.0
 
         # Prior probability for this action
-        P_value = node.action_policy[action]
-
-        # Visit count for this action
-        N_a = node.children_and_edge_visits[action][1]
+        P_value = node.action_policy.get(
+            action, 1.0 / len(node.game_state.actions)
+        )  # Default to uniform if missing
 
         # PUCT value: PlayerToMove(n) * Q(n, a) + c_puct * P(n, a) * sqrt(total_visits) / (1 + N(n, a))
-        puct_value = Q_value + c_puct * P_value * math.sqrt(total_visits) / (1 + N_a)
+        puct_value = Q_value + c_puct * P_value * math.sqrt(total_visits) / (
+            1 + edge_visits
+        )
 
-        # Update the best action if this PUCT value is larger than the previous best
+        # Update best action if the PUCT value is higher than the current best
         if puct_value > best_value:
             best_value = puct_value
             best_action = action

@@ -1,3 +1,6 @@
+import cProfile
+import pstats
+
 from simulator.game.connect import Config  # type: ignore[import]
 
 from alphazero_implementation.alphazero.trainer import AlphaZeroTrainer
@@ -5,8 +8,14 @@ from alphazero_implementation.models.games.connect4.v1 import BasicNN
 
 
 def train():
-    config = Config(6, 7, 2)
+    config = Config(6, 7, 4)
     initial_state = config.sample_initial_state()
+
+    # Define hyperparameters
+    num_iterations = 10
+    epochs_per_iter = 10
+    simulations_per_episode = 50
+    episodes_per_iter = 10
 
     model = BasicNN(
         height=config.height,
@@ -15,43 +24,42 @@ def train():
         num_players=config.num_players,
     )
 
-    trainer = AlphaZeroTrainer(model=model, mcgs_num_simulations=1)
+    # Save hyperparameters
+    model.save_hyperparameters(
+        {
+            "training": {
+                "num_iterations": num_iterations,
+                "epochs_per_iter": epochs_per_iter,
+                "episodes_per_iter": episodes_per_iter,
+                "simulations_per_episode": simulations_per_episode,
+            }
+        }
+    )
+
+    trainer = AlphaZeroTrainer(
+        model=model,
+        episodes_per_iter=episodes_per_iter,
+        simulations_per_episode=simulations_per_episode,
+    )
 
     trainer.train(
-        num_iterations=1,
-        self_play_batch_size=1,
+        num_iterations=num_iterations,
+        epochs_per_iter=epochs_per_iter,
         initial_state=initial_state,
     )
 
 
-# def play():
-#     config = Config(6, 7, 4)
-#     initial_state = (
-#         config.sample_initial_state()
-#     )  # Assuming this creates an initial state for Connect Four
+def profile_train():
+    profiler = cProfile.Profile()
+    profiler.enable()
 
-#     input_shape = (-1, 3, 6, 7)  # Example for Connect Four: 3 channels, 6x7 board
-#     num_actions = 7  # Example for Connect Four: 7 possible column choices
+    train()
 
-#     # Load the trained model
-#     nn = NeuralNetwork(input_shape, num_actions)
-#     nn.load("trained_model.pt", input_shape, num_actions)
-
-#     alpha_zero = AlphaZeroMCGS(neural_network=nn, num_simulations=800)
-
-#     # Demonstrate using the trained model to play a game
-#     print("Playing a game with the trained model...")
-#     state = initial_state
-#     while not state.has_ended:
-#         action = alpha_zero.get_best_action(state)
-#         print(f"Chosen action: {action}")
-#         state = action.sample_next_state()
-#         print(state)  # Assuming the State class has a string representation
-
-#     print("Game ended.")
-#     print(f"Final state: {state}")
-#     print(f"Reward: {state.reward[0]}")  # type: ignore[attr-defined]
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats("cumulative")
+    stats.print_stats(20)  # Print top 20 time-consuming functions
+    stats.dump_stats("train_profile.prof")  # Save profile results to a file
 
 
 if __name__ == "__main__":
-    train()
+    profile_train()
