@@ -46,6 +46,9 @@ class Node:
     def is_terminal(self) -> bool:
         return self.game_state.has_ended
 
+    def select_action(self, c_puct: float = 1.0) -> Action:
+        return select_action_according_to_puct(self, c_puct)
+
 
 def select_action_according_to_puct(node: Node, c_puct: float = 1.0) -> Action:
     """

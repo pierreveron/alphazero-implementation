@@ -5,7 +5,7 @@ from simulator.game.connect import Action, State  # type: ignore[import]
 
 from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.helpers.timeit import timeit
-from alphazero_implementation.mcts.mcgs import Node, select_action_according_to_puct
+from alphazero_implementation.mcts.mcgs import Node
 from alphazero_implementation.models.model import ActionPolicy, Model
 
 
@@ -121,7 +121,7 @@ class MCTSAgent:
             node.action_policy = policies[0]
             node.utility_values = values[0]
         else:
-            action = select_action_according_to_puct(node)
+            action = node.select_action()
             if action not in node.children_and_edge_visits:
                 new_game_state = action.sample_next_state()
 
@@ -182,7 +182,7 @@ class MCTSAgent:
                 node.utility_values = values[0]
                 break
             else:
-                action = select_action_according_to_puct(node)
+                action = node.select_action()
                 if action not in node.children_and_edge_visits:
                     new_game_state = action.sample_next_state()
 
@@ -240,7 +240,7 @@ class MCTSAgent:
                             leaf_nodes.append((node, path))
                             break
                         else:
-                            action = select_action_according_to_puct(node)
+                            action = node.select_action()
                             if action not in node.children_and_edge_visits:
                                 new_game_state = action.sample_next_state()
 
@@ -355,7 +355,7 @@ class MCTSAgent:
                             leaf_nodes.append((node, path))
                             break
                         else:
-                            action = select_action_according_to_puct(node)
+                            action = node.select_action()
                             if action not in node.children_and_edge_visits:
                                 new_game_state = action.sample_next_state()
 
