@@ -79,7 +79,7 @@ class MCTSAgent:
         episode = Episode()
         current_node = Node(game_state=initial_state)
         nodes_by_state: dict[State, Node] = {initial_state: current_node}
-        while not current_node.game_state.has_ended:
+        while not current_node.is_terminal:
             # Run MCTS to get policy
             for _ in range(self.simulations_per_episode):
                 # self.mcts_search_recursive(current_node, nodes_by_state)
@@ -114,7 +114,7 @@ class MCTSAgent:
         return episode
 
     def mcts_search_recursive(self, node: Node, nodes_by_state: dict[State, Node]):
-        if node.game_state.has_ended:
+        if node.is_terminal:
             node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
         elif node.visit_count == 0:  # New node not yet visited
             policies, values = self.model.predict([node.game_state])
@@ -173,7 +173,7 @@ class MCTSAgent:
         path: list[tuple[Node, Action]] = []
 
         while True:
-            if node.game_state.has_ended:
+            if node.is_terminal:
                 node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                 break
             elif node.visit_count == 0:  # New node not yet visited
@@ -217,13 +217,13 @@ class MCTSAgent:
             {node.game_state: node} for node in current_nodes
         ]
 
-        while any(not node.game_state.has_ended for node in current_nodes):
+        while any(not node.is_terminal for node in current_nodes):
             # Monte Carlo Tree Search / Graph Search
             for _ in range(self.simulations_per_episode):
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
 
                 for current_node_index, current_node in enumerate(current_nodes):
-                    if current_node.game_state.has_ended:
+                    if current_node.is_terminal:
                         continue
 
                     node: Node = current_node
@@ -231,7 +231,7 @@ class MCTSAgent:
                     nodes_by_state = nodes_by_state_list[current_node_index]
 
                     while True:
-                        if node.game_state.has_ended:
+                        if node.is_terminal:
                             node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                             # Add terminal nodes to leaf_nodes for backpropagation
                             leaf_nodes.append((node, path))
@@ -261,7 +261,7 @@ class MCTSAgent:
                     non_terminal_nodes = [
                         (node, path)
                         for node, path in leaf_nodes
-                        if not node.game_state.has_ended
+                        if not node.is_terminal
                     ]
 
                     # Handle non-terminal nodes with neural network
@@ -288,7 +288,7 @@ class MCTSAgent:
 
             # Calculate improved policies and choose actions
             for current_node_index, current_node in enumerate(current_nodes):
-                if current_node.game_state.has_ended:
+                if current_node.is_terminal:
                     continue
 
                 # policy = self.calculate_improved_policy(current_node)
@@ -338,7 +338,7 @@ class MCTSAgent:
                 leaf_nodes: list[tuple[Node, list[tuple[Node, Action]]]] = []
 
                 for current_node_index, current_node in enumerate(current_nodes):
-                    if current_node.game_state.has_ended:
+                    if current_node.is_terminal:
                         continue
 
                     node: Node = current_node
@@ -346,7 +346,7 @@ class MCTSAgent:
                     nodes_by_state = nodes_by_state_list[current_node_index]
 
                     while True:
-                        if node.game_state.has_ended:
+                        if node.is_terminal:
                             node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                             # Add terminal nodes to leaf_nodes for backpropagation
                             leaf_nodes.append((node, path))
@@ -376,7 +376,7 @@ class MCTSAgent:
                     non_terminal_nodes = [
                         (node, path)
                         for node, path in leaf_nodes
-                        if not node.game_state.has_ended
+                        if not node.is_terminal
                     ]
 
                     # Handle non-terminal nodes with neural network
@@ -403,7 +403,7 @@ class MCTSAgent:
 
             # Calculate improved policies and choose actions
             for current_node_index, current_node in enumerate(current_nodes):
-                if current_node.game_state.has_ended:
+                if current_node.is_terminal:
                     continue
 
                 # Get policy as a probability distribution
@@ -426,7 +426,7 @@ class MCTSAgent:
                 current_nodes[current_node_index] = self.select_next_node(current_node)
 
             for current_node_index, current_node in enumerate(current_nodes):
-                if not current_node.game_state.has_ended:
+                if not current_node.is_terminal:
                     continue
 
                 # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
