@@ -66,6 +66,15 @@ class MCTSAgent:
                 for action in root.game_state.actions
             }
 
+    def select_next_node(self, node: Node) -> Node:
+        """Select the most visited child node and return its action and node."""
+        action = max(
+            node.children_and_edge_visits.items(),
+            key=lambda x: x[1][1],  # x[1][1] is the edge visit count
+        )[0]
+        next_node = node.children_and_edge_visits[action][0]
+        return next_node
+
     def self_play(self, initial_state: State) -> Episode:
         episode = Episode()
         current_node = Node(game_state=initial_state)
@@ -94,9 +103,7 @@ class MCTSAgent:
                 )
             )
 
-            # Choose action based on policy and progress to next state
-            action = self.sample_action_from_policy(policy)
-            current_node = current_node.children_and_edge_visits[action][0]
+            current_node = self.select_next_node(current_node)
 
         # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
         outcome = current_node.game_state.reward  # type: ignore[attr-defined]
@@ -302,9 +309,7 @@ class MCTSAgent:
                     )
                 )
 
-                # Choose action based on the improved policy
-                action = self.sample_action_from_policy(policy)
-                new_current_node = current_node.children_and_edge_visits[action][0]
+                new_current_node = self.select_next_node(current_node)
                 current_nodes[current_node_index] = new_current_node
 
         for current_node_index, current_node in enumerate(current_nodes):
@@ -418,10 +423,7 @@ class MCTSAgent:
                     )
                 )
 
-                # Choose action based on the improved policy
-                action = self.sample_action_from_policy(policy)
-                new_current_node = current_node.children_and_edge_visits[action][0]
-                current_nodes[current_node_index] = new_current_node
+                current_nodes[current_node_index] = self.select_next_node(current_node)
 
             for current_node_index, current_node in enumerate(current_nodes):
                 if not current_node.game_state.has_ended:
