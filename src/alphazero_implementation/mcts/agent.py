@@ -75,24 +75,31 @@ class MCTSAgent:
         next_node = node.children_and_edge_visits[action][0]
         return next_node
 
+    def compute_policy(
+        self, node: Node, nodes_by_state: dict[State, Node]
+    ) -> ActionPolicy:
+        # Run MCTS to get policy
+        for _ in range(self.simulations_per_episode):
+            # self.mcts_search_recursive(current_node, nodes_by_state)
+            self.mcts_search(node, nodes_by_state)
+
+        # Get policy as a probability distribution
+        policy = {
+            action: edge_visits / (node.visit_count - 1)
+            for action, (
+                _,
+                edge_visits,
+            ) in node.children_and_edge_visits.items()
+        }
+
+        return policy
+
     def self_play(self, initial_state: State) -> Episode:
         episode = Episode()
         current_node = Node(game_state=initial_state)
         nodes_by_state: dict[State, Node] = {initial_state: current_node}
         while not current_node.is_terminal:
-            # Run MCTS to get policy
-            for _ in range(self.simulations_per_episode):
-                # self.mcts_search_recursive(current_node, nodes_by_state)
-                self.mcts_search(current_node, nodes_by_state)
-
-            # Get policy as a probability distribution
-            policy = {
-                action: edge_visits / (current_node.visit_count - 1)
-                for action, (
-                    _,
-                    edge_visits,
-                ) in current_node.children_and_edge_visits.items()
-            }
+            policy = self.compute_policy(current_node, nodes_by_state)
 
             # Collect data: (state, policy, outcome) where outcome will be assigned later
             episode.add_sample(

@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 
 from simulator.game.connect import Action, State
 
+from alphazero_implementation.mcts.agent import MCTSAgent
+from alphazero_implementation.mcts.mcgs import Node
 from alphazero_implementation.models.model import Model
 
 
@@ -31,5 +33,10 @@ class AlphaZeroAgent(Agent):
         self.model = model
 
     def predict(self, state: State) -> dict[Action, float]:
-        policies, _ = self.model.predict([state])
-        return policies[0]
+        agent = MCTSAgent(
+            self.model,
+            num_episodes=100,
+            simulations_per_episode=100,
+            initial_state=state,
+        )
+        return agent.compute_policy(Node(state), {})

@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from simulator.game.connect import Config  # type: ignore[import]
 
-from alphazero_implementation.models.games.connect4.v1 import BasicNN
+from alphazero_implementation.models.games.connect4 import CNNModel
 
 # from simulator.textual.examples.agent import AgentApp, RandomAgent
 from alphazero_implementation.textual.agent import AlphaZeroAgent, RandomAgent
@@ -12,9 +12,9 @@ from alphazero_implementation.textual.arena import ArenaApp
 def play():
     config = Config(6, 7, 4)
 
-    path = "/Users/pveron/Code/alphazero-implementation/lightning_logs/alphazero/run_095_iter50_episodes20_sims200/checkpoints/epoch=49-step=1557.ckpt"
+    path = "/Users/pveron/Code/alphazero-implementation/lightning_logs/alphazero/run_137_iter10_episodes10_sims50/checkpoints/epoch=99-step=20390.ckpt"
 
-    model = BasicNN.load_from_checkpoint(  # type: ignore[arg-type]
+    model = CNNModel.load_from_checkpoint(  # type: ignore[arg-type]
         path,
         height=config.height,
         width=config.width,
