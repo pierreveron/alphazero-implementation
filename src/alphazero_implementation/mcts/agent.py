@@ -333,9 +333,7 @@ class MCTSAgent:
 
         return episodes
 
-    def generate_episodes(
-        self, num_episodes: int = 100
-    ) -> Generator[Episode, None, None]:
+    def generate_episodes(self) -> Generator[Episode, None, None]:
         num_players = self.initial_state.config.num_players
         episodes = [Episode() for _ in range(self.num_episodes)]
         current_nodes: list[Node] = [
@@ -454,7 +452,7 @@ class MCTSAgent:
                 yield episodes[current_node_index]
 
                 episode_count += 1
-                if episode_count > num_episodes:
+                if episode_count >= self.num_episodes:
                     return
                 # Replace with a new episode
                 episodes[current_node_index] = Episode()

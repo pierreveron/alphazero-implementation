@@ -12,21 +12,20 @@ from alphazero_implementation.models.model import Model
 
 
 class EpisodeGenerator(threading.Thread):
-    def __init__(self, agent: MCTSAgent, buffer: deque[Episode], num_episodes: int):
+    def __init__(self, agent: MCTSAgent, buffer: deque[Episode]):
         super().__init__(daemon=True)
         self.agent = agent
         self.buffer = buffer
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
         self.episodes_added = 0
-        self.num_episodes = num_episodes
 
     def get_episodes_added(self) -> int:
         with self.lock:
             return self.episodes_added
 
     def run(self):
-        episodes = self.agent.generate_episodes(self.num_episodes)
+        episodes = self.agent.generate_episodes()
         for episode in episodes:
             if self.stop_event.is_set():
                 break
@@ -59,10 +58,8 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self.persistent_workers = persistent_workers
         self.buffer_size = buffer_size
         self.buffer: deque[Episode] = deque(maxlen=buffer_size)
+        self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
         self.min_new_episodes = min_new_episodes
-        self.episode_generator = EpisodeGenerator(
-            self.agent, self.buffer, self.min_new_episodes
-        )
 
     def setup(self, stage: str):
         if stage == "fit":
@@ -73,9 +70,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
         # If thread is not alive, create a new episode generator
         if not self.episode_generator.is_alive():
-            self.episode_generator = EpisodeGenerator(
-                self.agent, self.buffer, self.min_new_episodes
-            )
+            self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
             self.episode_generator.start()
 
         # Wait until we have min new episodes
