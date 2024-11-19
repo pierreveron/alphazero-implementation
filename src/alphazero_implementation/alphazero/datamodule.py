@@ -12,25 +12,27 @@ from alphazero_implementation.models.model import Model
 
 
 class EpisodeGenerator(threading.Thread):
-    def __init__(self, agent: MCTSAgent, buffer: deque[Episode]):
+    def __init__(self, agent: MCTSAgent, buffer: deque[Episode], num_episodes: int):
         super().__init__(daemon=True)
         self.agent = agent
         self.buffer = buffer
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
         self.episodes_added = 0
+        self.num_episodes = num_episodes
 
     def get_episodes_added(self) -> int:
         with self.lock:
             return self.episodes_added
 
     def run(self):
-        while not self.stop_event.is_set():
-            episodes = self.agent.generate_episodes()
-            for episode in episodes:
-                with self.lock:
-                    self.buffer.append(episode)
-                    self.episodes_added += 1
+        episodes = self.agent.generate_episodes(self.num_episodes)
+        for episode in episodes:
+            if self.stop_event.is_set():
+                break
+            with self.lock:
+                self.buffer.append(episode)
+                self.episodes_added += 1
 
     def stop(self):
         self.stop_event.set()
@@ -57,9 +59,10 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self.persistent_workers = persistent_workers
         self.buffer_size = buffer_size
         self.buffer: deque[Episode] = deque(maxlen=buffer_size)
-        self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
         self.min_new_episodes = min_new_episodes
-        self.last_episodes_added = 0
+        self.episode_generator = EpisodeGenerator(
+            self.agent, self.buffer, self.min_new_episodes
+        )
 
     def setup(self, stage: str):
         if stage == "fit":
@@ -68,24 +71,21 @@ class AlphaZeroDataModule(L.LightningDataModule):
     def train_dataloader(
         self,
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
-        # print("Getting new training data")
-        # Wait until we have min_new_data new samples
+        # If thread is not alive, create a new episode generator
+        if not self.episode_generator.is_alive():
+            self.episode_generator = EpisodeGenerator(
+                self.agent, self.buffer, self.min_new_episodes
+            )
+            self.episode_generator.start()
+
+        # Wait until we have min new episodes
         start_time = time.time()
-        while (
-            self.episode_generator.get_episodes_added() - self.last_episodes_added
-        ) < self.min_new_episodes:
-            # print(
-            #     f"Waiting for {self.min_new_data} new samples, {self.episode_generator.get_samples_added() - self.last_samples_added} already added in {time.time() - start_time:.2f} seconds"
-            # )
+        while self.episode_generator.get_episodes_added() < self.min_new_episodes:
             time.sleep(0.1)  # Sleep for a short time to avoid busy waiting
 
         waited_time = time.time() - start_time
-        episodes_added = self.episode_generator.get_episodes_added()
-        new_episodes = episodes_added - self.last_episodes_added
 
-        print(f"Got {new_episodes} new episodes in {waited_time:.2f} seconds")
-
-        self.last_episodes_added = episodes_added
+        print(f"Got {self.min_new_episodes} new episodes in {waited_time:.2f} seconds")
 
         all_samples: list[Sample] = []
         for episode in self.buffer:

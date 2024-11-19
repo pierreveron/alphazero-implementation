@@ -326,7 +326,9 @@ class MCTSAgent:
 
         return episodes
 
-    def generate_episodes(self) -> Generator[Episode, None, None]:
+    def generate_episodes(
+        self, num_episodes: int = 100
+    ) -> Generator[Episode, None, None]:
         num_players = self.initial_state.config.num_players
         episodes = [Episode() for _ in range(self.num_episodes)]
         current_nodes: list[Node] = [
@@ -336,6 +338,8 @@ class MCTSAgent:
         nodes_by_state_list: list[dict[State, Node]] = [
             {node.game_state: node} for node in current_nodes
         ]
+
+        episode_count = 0
 
         while True:
             # Monte Carlo Tree Search / Graph Search
@@ -441,6 +445,10 @@ class MCTSAgent:
                     episode_history[i].value = outcome.tolist()  # type: ignore[attr-defined]
 
                 yield episodes[current_node_index]
+
+                episode_count += 1
+                if episode_count > num_episodes:
+                    return
                 # Replace with a new episode
                 episodes[current_node_index] = Episode()
                 current_nodes[current_node_index] = Node(game_state=self.initial_state)
