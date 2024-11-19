@@ -113,15 +113,20 @@ class MCTSAgent:
 
         return episode
 
-    def mcts_search_recursive(self, node: Node, nodes_by_state: dict[State, Node]):
+    def perform_one_playout(self, node: Node, nodes_by_state: dict[State, Node]):
+        # 1. Selection - If node is visited, select best child using UCB
         if node.is_terminal:
-            node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
-        elif node.visit_count == 0:  # New node not yet visited
+            node.utility_values = node.game_state.reward.tolist()
+        elif node.visit_count == 0:
+            # 2. Expansion - If node is unvisited, evaluate with neural network
             policies, values = self.model.predict([node.game_state])
             node.action_policy = policies[0]
             node.utility_values = values[0]
         else:
+            # Select action using PUCT
             action = node.select_action()
+
+            # 3. Simulation - Create or reuse child node and simulate
             if action not in node.children_and_edge_visits:
                 new_game_state = action.sample_next_state()
 
@@ -133,10 +138,10 @@ class MCTSAgent:
                 node.children_and_edge_visits[action] = (child, 0)
 
             child, edge_visits = node.children_and_edge_visits[action]
-            self.mcts_search_recursive(child, nodes_by_state)
+            self.perform_one_playout(child, nodes_by_state)
             node.children_and_edge_visits[action] = (child, edge_visits + 1)
 
-        # Update statistics
+        # 4. Backpropagation - Update statistics back up the tree
         children_and_edge_visits = node.children_and_edge_visits.values()
         node.visit_count = 1 + sum(
             edge_visits for (_, edge_visits) in children_and_edge_visits
