@@ -47,7 +47,6 @@ class AlphaZeroDataModule(L.LightningDataModule):
         num_workers: int = 8,
         persistent_workers: bool = True,
         buffer_size: int = 5000,
-        min_new_episodes: int = 100,
     ):
         super().__init__()
         self.model = model
@@ -59,7 +58,6 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self.buffer_size = buffer_size
         self.buffer: deque[Episode] = deque(maxlen=buffer_size)
         self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
-        self.min_new_episodes = min_new_episodes
 
     def setup(self, stage: str):
         if stage == "fit":
@@ -68,19 +66,17 @@ class AlphaZeroDataModule(L.LightningDataModule):
     def train_dataloader(
         self,
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
-        # If thread is not alive, create a new episode generator
-        if not self.episode_generator.is_alive():
-            self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
-            self.episode_generator.start()
-
-        # Wait until we have min new episodes
+        # Wait until we have new episodes
         start_time = time.time()
-        while self.episode_generator.get_episodes_added() < self.min_new_episodes:
-            time.sleep(0.1)  # Sleep for a short time to avoid busy waiting
+        while self.episode_generator.is_alive():
+            time.sleep(0.1)
+
+        self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
+        self.episode_generator.start()
 
         waited_time = time.time() - start_time
 
-        print(f"Got {self.min_new_episodes} new episodes in {waited_time:.2f} seconds")
+        print(f"Got new episodes in {waited_time:.2f} seconds")
 
         all_samples: list[Sample] = []
         for episode in self.buffer:
