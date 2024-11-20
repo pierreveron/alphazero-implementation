@@ -1,6 +1,7 @@
 import os
 
 import lightning as L
+from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import State  # type: ignore[import]
 
@@ -57,13 +58,22 @@ class AlphaZeroTrainer:
             agent=mcts_agent,
         )
 
-        # Create trainer
+        # Create checkpoint callback
+        checkpoint_callback = ModelCheckpoint(
+            dirpath=f"checkpoints/run_{self.run_counter:03d}",
+            filename="model-{epoch:03d}",
+            every_n_epochs=50,
+            save_top_k=-1,  # Keep all checkpoints
+        )
+
+        # Create trainer with checkpoint callback
         trainer = L.Trainer(
             max_epochs=num_iterations * epochs_per_iter,
             log_every_n_steps=1,
             enable_progress_bar=True,
             logger=logger,
             reload_dataloaders_every_n_epochs=epochs_per_iter,
+            callbacks=[checkpoint_callback],  # Add the checkpoint callback
         )
 
         # Train the model
