@@ -1,8 +1,7 @@
 import asyncio
-import random
 from concurrent.futures import Executor, ThreadPoolExecutor
 
-from simulator.game.connect import Action, Config  # type: ignore[attr-defined]
+from simulator.game.connect import Config  # type: ignore[attr-defined]
 from simulator.textual.connect import ConnectBoard
 from textual.app import App, ComposeResult
 from textual.containers import Grid
@@ -48,12 +47,9 @@ class ArenaApp(App[None]):
         board.styles.border = ("round", "white")
         while not state.has_ended:
             current_agent = self.agent1 if state.player == 0 else self.agent2
-            policy = await loop.run_in_executor(
-                self.executor, current_agent.predict, state
+            action = await loop.run_in_executor(
+                self.executor, current_agent.predict_best_action, state
             )
-            actions: list[Action] = list(policy.keys())
-            weights: list[float] = list(policy.values())
-            [action] = random.choices(actions, weights)
             state = action.sample_next_state()
             board.state = state
         winner = state.reward.argmax()  # type: ignore[attr-defined]

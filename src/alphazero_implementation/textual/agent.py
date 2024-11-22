@@ -1,5 +1,4 @@
 import random
-import time
 from abc import ABC, abstractmethod
 
 from simulator.game.connect import Action, State
@@ -13,17 +12,15 @@ class Agent(ABC):
     """Abstract base class of AI player."""
 
     @abstractmethod
-    def predict(self, state: State) -> dict[Action, float]:
+    def predict_best_action(self, state: State) -> Action:
         pass
 
 
 class RandomAgent(Agent):
     """Uniform distribution."""
 
-    def predict(self, state: State) -> dict[Action, float]:
-        time.sleep(random.random())
-        actions = state.actions
-        return {action: 1 / len(actions) for action in actions}
+    def predict_best_action(self, state: State) -> Action:
+        return random.choice(state.actions)
 
 
 class AlphaZeroAgent(Agent):
@@ -32,11 +29,14 @@ class AlphaZeroAgent(Agent):
     def __init__(self, model: Model) -> None:
         self.model = model
 
-    def predict(self, state: State) -> dict[Action, float]:
+    def predict_best_action(self, state: State) -> Action:
+        # return self.model.predict([state])[0][0]
         agent = MCTSAgent(
             self.model,
             num_episodes=100,
             simulations_per_episode=100,
             initial_state=state,
         )
-        return agent.compute_policy(Node(state), {})
+        policy = agent.compute_policy(Node(state), {})
+        action = max(policy.items(), key=lambda x: x[1])[0]
+        return action
