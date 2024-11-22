@@ -36,6 +36,7 @@ class AlphaZeroTrainer:
         num_iterations: int,
         epochs_per_iter: int,
         initial_state: State,
+        buffer_size: int,
     ):
         # Create logger
         logger = TensorBoardLogger(
@@ -56,6 +57,7 @@ class AlphaZeroTrainer:
         datamodule = AlphaZeroDataModule(
             model=self.model,
             agent=mcts_agent,
+            buffer_size=buffer_size,
         )
 
         # Create checkpoint callback

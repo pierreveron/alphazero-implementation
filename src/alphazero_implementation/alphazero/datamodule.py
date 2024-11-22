@@ -42,11 +42,11 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self,
         model: Model,
         agent: MCTSAgent,
+        buffer_size: int,
         batch_size: int = 32,
         shuffle: bool = True,
         num_workers: int = 8,
         persistent_workers: bool = True,
-        buffer_size: int = 5000,
     ):
         super().__init__()
         self.model = model
