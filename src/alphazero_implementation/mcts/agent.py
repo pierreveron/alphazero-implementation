@@ -19,6 +19,7 @@ class MCTSAgent:
         parallel_mode: bool = False,
     ):
         self.model = model
+        self.inference_model = model.get_inference_clone()
         self.num_episodes = num_episodes
         self.simulations_per_episode = simulations_per_episode
         self.initial_state = initial_state
@@ -189,7 +190,7 @@ class MCTSAgent:
                 node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                 break
             elif node.visit_count == 0:  # New node not yet visited
-                policies, values = self.model.predict([node.game_state])
+                policies, values = self.inference_model.predict([node.game_state])
                 node.action_policy = policies[0]
                 node.utility_values = values[0]
                 break
@@ -281,7 +282,9 @@ class MCTSAgent:
                         states_to_evaluate = [
                             node.game_state for node, _ in non_terminal_nodes
                         ]
-                        policies, values = self.model.predict(states_to_evaluate)
+                        policies, values = self.inference_model.predict(
+                            states_to_evaluate
+                        )
 
                         for i, (node, _) in enumerate(non_terminal_nodes):
                             node.action_policy = policies[i]
@@ -398,7 +401,10 @@ class MCTSAgent:
                         states_to_evaluate = [
                             node.game_state for node, _ in non_terminal_nodes
                         ]
-                        policies, values = self.model.predict(states_to_evaluate)
+
+                        policies, values = self.inference_model.predict(
+                            states_to_evaluate
+                        )
 
                         for i, (node, _) in enumerate(non_terminal_nodes):
                             node.action_policy = policies[i]
@@ -460,3 +466,8 @@ class MCTSAgent:
                 nodes_by_state_list[current_node_index] = {
                     self.initial_state: current_nodes[current_node_index]
                 }
+
+    def update_inference_model(self):
+        """Update the inference model with the latest weights from the training model"""
+        self.inference_model.load_state_dict(self.model.state_dict())
+        self.inference_model.eval()
