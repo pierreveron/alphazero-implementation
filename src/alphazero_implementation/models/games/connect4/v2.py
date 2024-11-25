@@ -83,10 +83,7 @@ class CNNModel(Connect4Model):
             #     tensor = tensor.reshape(height, width)
 
             # Create the three channels
-            available_moves = torch.zeros(height, width)
-            available_moves[0] = (
-                tensor[0] == -1
-            ).float()  # Top row for available moves
+            available_moves = (tensor == -1).float()
             current_player = (tensor == state.player).float()
             opponent = (tensor == (1 - state.player)).float()
 
