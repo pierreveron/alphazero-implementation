@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 
 from simulator.game.connect import Action, State
 
-from alphazero_implementation.mcts.agent import MCTSAgent
-from alphazero_implementation.mcts.mcgs import Node
+from alphazero_implementation.mcts_v2.mcts import AlphaZeroMCTS
+from alphazero_implementation.mcts_v2.node import Node
 from alphazero_implementation.models.model import Model
 
 
@@ -30,13 +30,11 @@ class AlphaZeroAgent(Agent):
         self.model = model
 
     def predict_best_action(self, state: State) -> Action:
-        # return self.model.predict([state])[0][0]
-        agent = MCTSAgent(
-            self.model,
-            num_episodes=100,
-            simulations_per_episode=100,
-            initial_state=state,
-        )
-        policy = agent.compute_policy(Node(state), {})
+        # policy = self.model.predict([state])[0][0]
+        # action = max(policy.items(), key=lambda x: x[1])[0]
+        # return action
+
+        agent = AlphaZeroMCTS(self.model)
+        policy = agent.run(Node(state), 100)
         action = max(policy.items(), key=lambda x: x[1])[0]
         return action
