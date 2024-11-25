@@ -15,8 +15,8 @@ def train():
     num_iterations = 200
     epochs_per_iter = 10
     simulations_per_episode = 100
-    episodes_per_iter = 25
-    buffer_size = 1000
+    episodes_per_iter = 100
+    buffer_size = episodes_per_iter * 50
 
     model = CNNModel(
         height=config.height,
