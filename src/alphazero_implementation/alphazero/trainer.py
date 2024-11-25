@@ -6,7 +6,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import State  # type: ignore[import]
 
 from alphazero_implementation.alphazero.datamodule import AlphaZeroDataModule
-from alphazero_implementation.mcts.agent import MCTSAgent
+from alphazero_implementation.mcgs.mcts import AlphaZeroMCTS
 from alphazero_implementation.models.model import Model
 
 
@@ -45,12 +45,18 @@ class AlphaZeroTrainer:
             version=f"run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}",
         )
 
-        mcts_agent = MCTSAgent(
+        # mcts_agent = MCTSAgent(
+        #     model=self.model,
+        #     num_episodes=self.episodes_per_iter,
+        #     simulations_per_episode=self.simulations_per_episode,
+        #     initial_state=initial_state,
+        #     parallel_mode=True,
+        # )
+        mcts_agent = AlphaZeroMCTS(
             model=self.model,
+            num_simulations=self.simulations_per_episode,
             num_episodes=self.episodes_per_iter,
-            simulations_per_episode=self.simulations_per_episode,
-            initial_state=initial_state,
-            parallel_mode=True,
+            game_initial_state=initial_state,
         )
 
         # Create data module

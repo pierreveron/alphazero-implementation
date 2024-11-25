@@ -7,22 +7,17 @@ import torch
 from torch.utils.data import DataLoader
 
 from alphazero_implementation.alphazero.types import Episode, Sample
-from alphazero_implementation.mcts.agent import MCTSAgent
+from alphazero_implementation.mcgs.mcts import AlphaZeroMCTS
 from alphazero_implementation.models.model import Model
 
 
 class EpisodeGenerator(threading.Thread):
-    def __init__(self, agent: MCTSAgent, buffer: deque[Episode]):
+    def __init__(self, agent: AlphaZeroMCTS, buffer: deque[Episode]):
         super().__init__(daemon=True)
         self.agent = agent
         self.buffer = buffer
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
-        self.episodes_added = 0
-
-    def get_episodes_added(self) -> int:
-        with self.lock:
-            return self.episodes_added
 
     def run(self):
         episodes = self.agent.generate_episodes()
@@ -31,7 +26,6 @@ class EpisodeGenerator(threading.Thread):
                 break
             with self.lock:
                 self.buffer.append(episode)
-                self.episodes_added += 1
 
     def stop(self):
         self.stop_event.set()
@@ -41,7 +35,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
     def __init__(
         self,
         model: Model,
-        agent: MCTSAgent,
+        agent: AlphaZeroMCTS,
         buffer_size: int,
         batch_size: int = 32,
         shuffle: bool = True,
