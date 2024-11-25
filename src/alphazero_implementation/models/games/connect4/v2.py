@@ -9,15 +9,15 @@ class CNNModel(Connect4Model):
     def __init__(self, height: int, width: int, max_actions: int, num_players: int):
         super().__init__(height, width, max_actions, num_players)
 
-        # Paramètres des couches CNN
+        # Parameters for CNN layers
         self.channels = [
             3,
             64,
             128,
             256,
-        ]  # Channels d'entrée et de sortie pour chaque couche
+        ]  # Input and output channels for each layer
 
-        # Couches CNN
+        # CNN layers
         self.conv_layers = nn.Sequential(
             nn.Conv2d(self.channels[0], self.channels[1], kernel_size=3, padding=1),
             nn.BatchNorm2d(self.channels[1]),
@@ -30,10 +30,10 @@ class CNNModel(Connect4Model):
             nn.ReLU(),
         )
 
-        # Calcul de la taille après les couches CNN
+        # Calculate size after CNN layers
         self.conv_output_size = self.channels[-1] * height * width
 
-        # Couches fully connected
+        # Fully connected layers
         self.shared_layers = nn.Sequential(
             nn.Linear(self.conv_output_size, 512),
             nn.ReLU(),
@@ -52,16 +52,16 @@ class CNNModel(Connect4Model):
         # Move input tensor to the same device as the model
         x = x.to(next(self.parameters()).device)
 
-        # Passage dans les couches CNN
+        # Pass through CNN layers
         x = self.conv_layers(x)
 
-        # Flatten pour les couches fully connected
+        # Flatten for fully connected layers
         x = x.view(x.size(0), -1)
 
-        # Couches partagées
+        # Shared layers
         shared_output = self.shared_layers(x)
 
-        # Têtes de sortie
+        # Output heads
         policy_logits = self.policy_head(shared_output)
         value = self.value_head(shared_output)
 
