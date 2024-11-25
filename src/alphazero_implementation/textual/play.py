@@ -20,9 +20,7 @@ def play():
         width=config.width,
         max_actions=config.width,
         num_players=config.num_players,
-    )
-
-    model.eval()
+    ).eval()
 
     with ThreadPoolExecutor() as executor:
         agent1 = AlphaZeroAgent(model)
