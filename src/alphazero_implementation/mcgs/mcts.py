@@ -59,10 +59,12 @@ class AlphaZeroMCTS:
 
     def expand(self, node: Node):
         """Expand a node by adding all possible children."""
-        [policy], _ = self.inference_model.predict([node.state])
+        [policy], [values] = self.inference_model.predict([node.state])
         for action, prob in policy.items():
             next_state = action.sample_next_state()
             node.add_child(action, next_state, prob)
+
+        return values[node.state.player]
 
     def backpropagate(self, node: Node | None, value: float):
         """Backpropagate the result of a simulation up the tree."""
@@ -87,9 +89,7 @@ class AlphaZeroMCTS:
             if node.is_terminal:
                 value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore
             else:
-                self.expand(node)
-                _, [values] = self.inference_model.predict([node.state])
-                value = values[node.state.player]
+                value = self.expand(node)
 
             # Backpropagation
             self.backpropagate(node, value)
@@ -121,9 +121,7 @@ class AlphaZeroMCTS:
                     if node.is_terminal:
                         value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore
                     else:
-                        self.expand(node)
-                        _, [values] = self.inference_model.predict([node.state])
-                        value = values[node.state.player]
+                        value = self.expand(node)
 
                     # Backpropagation
                     self.backpropagate(node, value)
