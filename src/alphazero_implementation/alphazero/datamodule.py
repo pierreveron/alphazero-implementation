@@ -71,7 +71,9 @@ class AlphaZeroDataModule(L.LightningDataModule):
 
         waited_time = time.time() - start_time
 
-        print(f"Got new episodes in {waited_time:.2f} seconds")
+        print(
+            f"Got {self.agent.num_episodes} new episodes in {waited_time:.2f} seconds"
+        )
 
         all_samples: list[Sample] = []
         for episode in self.buffer:
