@@ -127,7 +127,7 @@ class MCTSAgent:
             node.utility_values = node.game_state.reward.tolist()
         elif node.visit_count == 0:
             # 2. Expansion - If node is unvisited, evaluate with neural network
-            policies, values = self.model.predict([node.game_state])
+            policies, values = self.inference_model.predict([node.game_state])
             node.action_policy = policies[0]
             node.utility_values = values[0]
         else:
