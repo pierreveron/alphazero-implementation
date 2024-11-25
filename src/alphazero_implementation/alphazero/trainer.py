@@ -68,9 +68,8 @@ class AlphaZeroTrainer:
 
         # Create checkpoint callback
         checkpoint_callback = ModelCheckpoint(
-            dirpath=f"checkpoints/run_{self.run_counter:03d}",
-            filename="model-{epoch:03d}",
-            every_n_epochs=50,
+            # filename="{epoch}-{val_loss:.2f}-{other_metric:.2f}",
+            every_n_epochs=25 * epochs_per_iter,
             save_top_k=-1,  # Keep all checkpoints
         )
 
