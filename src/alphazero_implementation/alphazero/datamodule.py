@@ -66,7 +66,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
             time.sleep(0.1)
 
         self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
-        self.agent.update_inference_model()
+        self.agent.update_inference_model(self.model)
         self.episode_generator.start()
 
         waited_time = time.time() - start_time

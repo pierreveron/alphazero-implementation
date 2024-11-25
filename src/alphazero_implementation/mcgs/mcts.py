@@ -18,16 +18,15 @@ class AlphaZeroMCTS:
         game_initial_state: State,
         exploration_weight: float = 1.0,
     ):
-        self.model = model
-        self.inference_model = self.model.get_inference_clone()
+        self.inference_model = model.get_inference_clone()
         self.num_simulations = num_simulations
         self.num_episodes = num_episodes
         self.game_initial_state = game_initial_state
         self.exploration_weight = exploration_weight
 
-    def update_inference_model(self):
+    def update_inference_model(self, model: Model):
         """Update the inference model with the latest weights from the training model"""
-        self.inference_model.load_state_dict(self.model.state_dict())
+        self.inference_model.load_state_dict(model.state_dict())
         self.inference_model.eval()
 
     def select_child(self, node: Node) -> Node:
@@ -60,15 +59,10 @@ class AlphaZeroMCTS:
 
     def expand(self, node: Node):
         """Expand a node by adding all possible children."""
-        [policy], _ = self.model.predict([node.state])
+        [policy], _ = self.inference_model.predict([node.state])
         for action, prob in policy.items():
             next_state = action.sample_next_state()
             node.add_child(action, next_state, prob)
-
-    def simulate(self, node: Node) -> float:
-        """Use the neural network to predict the value of the state."""
-        _, [value] = self.model.predict([node.state])
-        return value[node.state.player]
 
     def backpropagate(self, node: Node | None, value: float):
         """Backpropagate the result of a simulation up the tree."""
@@ -94,7 +88,7 @@ class AlphaZeroMCTS:
                 value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore
             else:
                 self.expand(node)
-                _, [values] = self.model.predict([node.state])
+                _, [values] = self.inference_model.predict([node.state])
                 value = values[node.state.player]
 
             # Backpropagation
@@ -128,7 +122,7 @@ class AlphaZeroMCTS:
                         value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore
                     else:
                         self.expand(node)
-                        _, [values] = self.model.predict([node.state])
+                        _, [values] = self.inference_model.predict([node.state])
                         value = values[node.state.player]
 
                     # Backpropagation
