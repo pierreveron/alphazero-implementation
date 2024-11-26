@@ -1,4 +1,4 @@
-import pickle
+import json
 import threading
 import time
 from collections import deque
@@ -68,12 +68,21 @@ class AlphaZeroDataModule(L.LightningDataModule):
 
     def _save_episodes(self):
         """Save current episodes in buffer to disk."""
-        save_path = self.save_dir / f"episodes_iter{self.current_iteration:04d}.pkl"
+        save_path = self.save_dir / f"episodes_iter{self.current_iteration:04d}.json"
 
-        with open(save_path, "wb") as f:
-            pickle.dump(list(self.buffer), f)
+        episodes_data = [episode.to_dict() for episode in self.buffer]
+
+        with open(save_path, "w") as f:
+            json.dump(episodes_data, f)
 
         print(f"Saved {len(self.buffer)} episodes to {save_path}")
+
+    def _load_episodes(self, path: Path) -> list[Episode]:
+        """Load episodes from JSON file"""
+        with open(path, "r") as f:
+            episodes_data = json.load(f)
+
+        return [Episode.from_dict(episode_data) for episode_data in episodes_data]
 
     def train_dataloader(
         self,
