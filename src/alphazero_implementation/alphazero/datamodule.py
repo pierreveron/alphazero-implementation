@@ -1,6 +1,8 @@
+import pickle
 import threading
 import time
 from collections import deque
+from pathlib import Path
 
 import lightning as L
 import torch
@@ -37,10 +39,12 @@ class AlphaZeroDataModule(L.LightningDataModule):
         model: Model,
         agent: AlphaZeroMCTS,
         buffer_size: int,
+        save_every_n_iterations: int,
         batch_size: int = 32,
         shuffle: bool = True,
         num_workers: int = 8,
         persistent_workers: bool = True,
+        save_dir: str | Path | None = None,
     ):
         super().__init__()
         self.model = model
@@ -52,10 +56,24 @@ class AlphaZeroDataModule(L.LightningDataModule):
         self.buffer_size = buffer_size
         self.buffer: deque[Episode] = deque(maxlen=buffer_size)
         self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
+        # Setup save directory
+        self.save_every_n_iterations = save_every_n_iterations
+        self.save_dir = Path(save_dir) if save_dir else Path("episodes")
+        self.save_dir.mkdir(parents=True, exist_ok=True)
+        self.current_iteration = 0
 
     def setup(self, stage: str):
         if stage == "fit":
             self.episode_generator.start()
+
+    def _save_episodes(self):
+        """Save current episodes in buffer to disk."""
+        save_path = self.save_dir / f"episodes_iter{self.current_iteration:04d}.pkl"
+
+        with open(save_path, "wb") as f:
+            pickle.dump(list(self.buffer), f)
+
+        print(f"Saved {len(self.buffer)} episodes to {save_path}")
 
     def train_dataloader(
         self,
@@ -74,6 +92,11 @@ class AlphaZeroDataModule(L.LightningDataModule):
         print(
             f"Got {self.agent.num_episodes} new episodes in {waited_time:.2f} seconds"
         )
+
+        # Save the new episodes
+        self.current_iteration += 1
+        if self.current_iteration % self.save_every_n_iterations == 0:
+            self._save_episodes()
 
         all_samples: list[Sample] = []
         for episode in self.buffer:

@@ -37,6 +37,7 @@ class AlphaZeroTrainer:
         epochs_per_iter: int,
         initial_state: State,
         buffer_size: int,
+        save_every_n_iterations: int,
     ):
         # Create logger
         logger = TensorBoardLogger(
@@ -64,6 +65,8 @@ class AlphaZeroTrainer:
             model=self.model,
             agent=mcts_agent,
             buffer_size=buffer_size,
+            save_every_n_iterations=save_every_n_iterations,
+            save_dir=f"run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}/episodes",
         )
 
         # Create checkpoint callback

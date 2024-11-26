@@ -16,7 +16,8 @@ def train():
     epochs_per_iter = 10
     simulations_per_episode = 100
     episodes_per_iter = 100
-    buffer_size = episodes_per_iter * 10
+    save_every_n_iterations = 10
+    buffer_size = episodes_per_iter * save_every_n_iterations
 
     model = CNNModel(
         height=config.height,
@@ -34,6 +35,7 @@ def train():
                 "episodes_per_iter": episodes_per_iter,
                 "simulations_per_episode": simulations_per_episode,
                 "buffer_size": buffer_size,
+                "save_every_n_iterations": save_every_n_iterations,
             }
         }
     )
@@ -49,6 +51,7 @@ def train():
         epochs_per_iter=epochs_per_iter,
         initial_state=initial_state,
         buffer_size=buffer_size,
+        save_every_n_iterations=save_every_n_iterations,
     )
 
 
