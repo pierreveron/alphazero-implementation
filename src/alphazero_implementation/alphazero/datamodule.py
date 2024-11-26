@@ -20,7 +20,7 @@ class EpisodeGenerator(threading.Thread):
         self.lock = threading.Lock()
 
     def run(self):
-        episodes = self.agent.generate_episodes()
+        episodes = self.agent.generate_episodes_in_parallel()
         for episode in episodes:
             if self.stop_event.is_set():
                 break
