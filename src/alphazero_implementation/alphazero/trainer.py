@@ -66,7 +66,7 @@ class AlphaZeroTrainer:
             agent=mcts_agent,
             buffer_size=buffer_size,
             save_every_n_iterations=save_every_n_iterations,
-            save_dir=f"run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}/episodes",
+            save_dir=f"lightning_logs/alphazero/run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}/episodes",
         )
 
         # Create checkpoint callback
