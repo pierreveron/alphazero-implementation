@@ -25,16 +25,19 @@ class ArenaApp(App[None]):
 
     """
 
-    def __init__(self, agent1: Agent, agent2: Agent, executor: Executor) -> None:
+    def __init__(
+        self, agent1: Agent, agent2: Agent, executor: Executor, num_games: int
+    ) -> None:
         self.agent1 = agent1
         self.agent2 = agent2
         self.executor = executor
         self.boards: list[ConnectBoard] = []
+        self.num_games = num_games
         super().__init__()
 
     def compose(self) -> ComposeResult:
         with Grid():
-            for _ in range(8):
+            for _ in range(self.num_games):
                 board = ConnectBoard(disabled=True)
                 _ = asyncio.create_task(self._handle_board(board))  # noqa: RUF006
                 yield board
