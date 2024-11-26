@@ -23,6 +23,7 @@ class AlphaZeroMCTS:
         self.num_episodes = num_episodes
         self.game_initial_state = game_initial_state
         self.exploration_weight = exploration_weight
+        self.num_players = game_initial_state.config.num_players
 
     def update_inference_model(self, model: Model):
         """Update the inference model with the latest weights from the training model"""
@@ -153,3 +154,80 @@ class AlphaZeroMCTS:
                 episode_history[i].value = outcome
 
             yield episode
+
+    def generate_episodes_in_parallel(
+        self, initial_state: State | None = None
+    ) -> Generator[Episode, None, None]:
+        """Run the MCTS algorithm for a given number of simulations."""
+        if initial_state is None:
+            initial_state = self.game_initial_state
+
+        episodes = [Episode() for _ in range(self.num_episodes)]
+        current_nodes: list[Node] = [
+            Node(initial_state) for _ in range(self.num_episodes)
+        ]
+
+        episode_count = 0
+        while True:
+            # Run all simulations first
+            for _ in range(self.num_simulations):
+                # Track nodes that need expansion
+                nodes_to_expand: list[Node] = []
+
+                for current_node_index, current_node in enumerate(current_nodes):
+                    node = current_node
+
+                    while node.is_expanded:
+                        node = self.select_child(node)
+
+                    if node.is_terminal:
+                        value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
+                        self.backpropagate(node, value)
+                    else:
+                        nodes_to_expand.append(node)
+
+                # Batch prediction for all nodes that need expansion
+                if nodes_to_expand:
+                    states = [node.state for node in nodes_to_expand]
+                    policies, values = self.inference_model.predict(states)
+
+                    # Expand all nodes with their predictions
+                    for node, policy, value in zip(nodes_to_expand, policies, values):
+                        for action, prob in policy.items():
+                            next_state = action.sample_next_state()
+                            node.add_child(action, next_state, prob)
+                        self.backpropagate(node, value[node.state.player])
+
+            # After all simulations are complete, then collect samples
+            for current_node_index, current_node in enumerate(current_nodes):
+                episode = episodes[current_node_index]
+
+                episode.add_sample(
+                    Sample(
+                        state=current_node.state,
+                        policy=current_node.improved_policy,
+                        value=[0.0] * self.num_players,
+                    )
+                )
+
+                current_node = current_node.select_next_node()
+
+                if not current_node.is_terminal:
+                    current_nodes[current_node_index] = current_node
+                    continue
+
+                # The game ended
+                outcome: list[float] = current_node.state.reward.tolist()  # type: ignore[attr-defined]
+
+                episode_history = episode.samples
+                for i in range(len(episode_history)):
+                    episode_history[i].value = outcome
+
+                yield episode
+
+                current_nodes[current_node_index] = Node(initial_state)
+                episodes[current_node_index] = Episode()
+                episode_count += 1
+
+                if episode_count >= self.num_episodes:
+                    return
