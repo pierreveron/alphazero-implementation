@@ -26,8 +26,9 @@ class RandomAgent(Agent):
 class AlphaZeroAgent(Agent):
     """AlphaZero agent."""
 
-    def __init__(self, model: Model) -> None:
+    def __init__(self, model: Model, *, stochastic: bool = False) -> None:
         self.model = model
+        self.stochastic = stochastic
 
     def predict_best_action(self, state: State) -> Action:
         # policy = self.model.predict([state])[0][0]
@@ -36,5 +37,12 @@ class AlphaZeroAgent(Agent):
 
         agent = AlphaZeroMCTS(self.model)
         policy = agent.run(Node(state), 100)
-        action = max(policy.items(), key=lambda x: x[1])[0]
+
+        if self.stochastic:
+            action = random.choices(list(policy.keys()), weights=list(policy.values()))[
+                0
+            ]
+        else:
+            action = max(policy.items(), key=lambda x: x[1])[0]
+
         return action
