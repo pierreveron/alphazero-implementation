@@ -27,8 +27,10 @@ class Sample:
     def to_dict(self) -> dict[str, Any]:
         """Convert Sample to dictionary for JSON serialization"""
         return {
-            "state": self.state.to_json(),  # Assuming State has a to_json method
-            "policy": {action.to_json(): prob for action, prob in self.policy.items()},
+            "state": self.state.to_json(),
+            "policy": {
+                str(action.to_json()): prob for action, prob in self.policy.items()
+            },
             "value": self.value,
         }
 
@@ -38,7 +40,7 @@ class Sample:
         return cls(
             state=State.from_json(data["state"]),
             policy={
-                Action.from_json(action_data): prob
+                Action.from_json(eval(action_data)): prob
                 for action_data, prob in data["policy"].items()
             },
             value=data["value"],
