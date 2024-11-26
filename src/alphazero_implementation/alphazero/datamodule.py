@@ -68,7 +68,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
 
     def _save_episodes(self):
         """Save current episodes in buffer to disk."""
-        save_path = self.save_dir / f"episodes_iter{self.current_iteration:04d}.json"
+        save_path = self.save_dir / f"episodes_iter{self.current_iteration}.json"
 
         episodes_data = [episode.to_dict() for episode in self.buffer]
 
