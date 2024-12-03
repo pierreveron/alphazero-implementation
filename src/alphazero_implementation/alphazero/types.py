@@ -75,14 +75,3 @@ class Episode:
             Sample.from_dict(sample_data) for sample_data in data["samples"]
         ]
         return episode
-
-
-@dataclass
-class Iteration:
-    """Represents a complete training iteration"""
-
-    episodes: list[Episode]
-    loss: float
-    policy_loss: float
-    value_loss: float
-    accuracy: float
