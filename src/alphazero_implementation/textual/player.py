@@ -8,15 +8,15 @@ from alphazero_implementation.mcgs.search import AlphaZeroMCTS
 from alphazero_implementation.models.model import Model
 
 
-class Agent(ABC):
+class Player(ABC):
     """Abstract base class of AI player."""
 
     @abstractmethod
-    def predict_best_action(self, state: State) -> Action:
+    def play(self, state: State) -> Action:
         pass
 
 
-class AlphaZeroAgent(Agent):
+class AlphaZeroPlayer(Player):
     """AlphaZero agent that uses MCTS with neural network guidance to select moves.
 
     This agent implements the AlphaZero algorithm, using Monte Carlo Tree Search (MCTS)
@@ -40,7 +40,7 @@ class AlphaZeroAgent(Agent):
         self.mcts_simulation = mcts_simulation
         self.temperature = temperature
 
-    def predict_best_action(self, state: State) -> Action:
+    def play(self, state: State) -> Action:
         """Predict the best action for the given game state.
 
         Uses MCTS with neural network guidance to search for the best move. The search
