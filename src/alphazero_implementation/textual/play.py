@@ -25,9 +25,8 @@ def play():
     ).eval()
 
     with ThreadPoolExecutor() as executor:
-        agent1 = AlphaZeroAgent(model)
-        agent2 = AlphaZeroAgent(model, stochastic=True)
-        # agent2 = RandomAgent()
+        agent1 = AlphaZeroAgent(model, temperature=0)
+        agent2 = AlphaZeroAgent(model)
         app = ArenaApp(agent1, agent2, executor, 2)
         app.run()
 
