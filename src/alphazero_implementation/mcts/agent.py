@@ -68,11 +68,18 @@ class MCTSAgent:
             }
 
     def select_next_node(self, node: Node) -> Node:
-        """Select the most visited child node and return its action and node."""
-        action = max(
-            node.children_and_edge_visits.items(),
-            key=lambda x: x[1][1],  # x[1][1] is the edge visit count
-        )[0]
+        """Select a child node randomly according to the policy distribution."""
+
+        policy = {
+            action: edge_visits / (node.visit_count - 1)
+            for action, (
+                _,
+                edge_visits,
+            ) in node.children_and_edge_visits.items()
+        }
+
+        index = np.random.choice(len(policy), p=list(policy.values()))
+        action = list(policy.keys())[index]
         next_node = node.children_and_edge_visits[action][0]
         return next_node
 
@@ -83,6 +90,8 @@ class MCTSAgent:
         for _ in range(self.simulations_per_episode):
             # self.mcts_search_recursive(current_node, nodes_by_state)
             self.mcts_search(node, nodes_by_state)
+            if node.is_terminal:
+                break
 
         # Get policy as a probability distribution
         policy = {
@@ -421,12 +430,7 @@ class MCTSAgent:
                     for _, path in leaf_nodes:
                         self.backpropagate(path)
 
-            # Calculate improved policies and choose actions
             for current_node_index, current_node in enumerate(current_nodes):
-                if current_node.is_terminal:
-                    continue
-
-                # Get policy as a probability distribution
                 policy = {
                     action: edge_visits / (current_node.visit_count - 1)
                     for action, (
@@ -435,19 +439,27 @@ class MCTSAgent:
                     ) in current_node.children_and_edge_visits.items()
                 }
 
+                if not current_node.is_terminal:
+                    episodes[current_node_index].add_sample(
+                        Sample(
+                            current_node.game_state,
+                            policy,
+                            [0.0] * num_players,
+                        )
+                    )
+
+                    current_nodes[current_node_index] = self.select_next_node(
+                        current_node
+                    )
+                    continue
+
                 episodes[current_node_index].add_sample(
                     Sample(
                         current_node.game_state,
                         policy,
-                        [0.0] * num_players,
+                        current_node.utility_values,
                     )
                 )
-
-                current_nodes[current_node_index] = self.select_next_node(current_node)
-
-            for current_node_index, current_node in enumerate(current_nodes):
-                if not current_node.is_terminal:
-                    continue
 
                 # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
                 outcome = current_node.game_state.reward  # type: ignore[attr-defined]

@@ -16,33 +16,59 @@ class Agent(ABC):
         pass
 
 
-class RandomAgent(Agent):
-    """Uniform distribution."""
-
-    def predict_best_action(self, state: State) -> Action:
-        return random.choice(state.actions)
-
-
 class AlphaZeroAgent(Agent):
-    """AlphaZero agent."""
+    """AlphaZero agent that uses MCTS with neural network guidance to select moves.
 
-    def __init__(self, model: Model, *, stochastic: bool = False) -> None:
+    This agent implements the AlphaZero algorithm, using Monte Carlo Tree Search (MCTS)
+    guided by a neural network to select actions. The agent can operate with different
+    temperature settings to control exploration vs exploitation.
+
+    Args:
+        model (Model): Neural network model that provides policy and value predictions
+        mcts_simulation (int, optional): Number of MCTS simulations to run. Defaults to 100.
+        temperature (float, optional): Temperature parameter for action selection:
+            - temperature = 0: Deterministic selection (highest probability move)
+            - 0 < temperature < inf: Stochastic selection weighted by probabilities
+            - temperature = inf: Uniform random selection
+            Defaults to 1.0.
+    """
+
+    def __init__(
+        self, model: Model, *, mcts_simulation: int = 100, temperature: float = 1.0
+    ) -> None:
         self.model = model
-        self.stochastic = stochastic
+        self.mcts_simulation = mcts_simulation
+        self.temperature = temperature
 
     def predict_best_action(self, state: State) -> Action:
-        # policy = self.model.predict([state])[0][0]
-        # action = max(policy.items(), key=lambda x: x[1])[0]
-        # return action
+        """Predict the best action for the given game state.
+
+        Uses MCTS with neural network guidance to search for the best move. The search
+        process is controlled by the temperature parameter:
+        - At temperature=0, selects the move with highest visit count
+        - At 0<temperature<inf, samples moves proportional to their visit counts
+        - At temperature=inf, selects a random legal move
+
+        Args:
+            state (State): Current game state
+
+        Returns:
+            Action: Selected action to take
+        """
+        if self.temperature == float("inf"):
+            return random.choice(state.actions)
 
         agent = AlphaZeroMCTS(self.model)
-        policy = agent.run(Node(state), 100)
+        policy = agent.run(Node(state), self.mcts_simulation)
 
-        if self.stochastic:
-            action = random.choices(list(policy.keys()), weights=list(policy.values()))[
-                0
-            ]
-        else:
+        if self.temperature == 0:
             action = max(policy.items(), key=lambda x: x[1])[0]
+        else:
+            # Apply temperature by exponentiating probabilities
+            probs = [p ** (1 / self.temperature) for p in policy.values()]
+            # Renormalize
+            total = sum(probs)
+            probs = [p / total for p in probs]
+            action = random.choices(list(policy.keys()), weights=probs)[0]
 
         return action
