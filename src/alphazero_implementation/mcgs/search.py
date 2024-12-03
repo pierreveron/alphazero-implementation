@@ -1,7 +1,7 @@
 import math
 from typing import Generator
 
-from simulator.game.connect import Action, State
+from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
 from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.mcgs.node import Node
@@ -56,7 +56,7 @@ class AlphaZeroMCTS:
                 best_score = score
                 best_child = child
 
-        return best_child  # type: ignore
+        return best_child  # type: ignore[return-value]
 
     def expand(self, node: Node):
         """Expand a node by adding all possible children."""
@@ -78,7 +78,7 @@ class AlphaZeroMCTS:
 
     def run(self, root: Node, num_simulations: int) -> dict[Action, float]:
         """Run the MCTS algorithm for a given number of simulations."""
-        for idx in range(num_simulations):
+        for _ in range(num_simulations):
             node = root
 
             # Selection
@@ -88,7 +88,7 @@ class AlphaZeroMCTS:
             # Expansion and evaluation
             value: float = 0
             if node.is_terminal:
-                value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore
+                value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
             else:
                 value = self.expand(node)
 
@@ -110,7 +110,7 @@ class AlphaZeroMCTS:
             episode = Episode()
             episode_count += 1
             while not current_node.is_terminal:
-                for idx in range(self.num_simulations):
+                for _ in range(self.num_simulations):
                     node = current_node
 
                     # Selection
@@ -120,7 +120,7 @@ class AlphaZeroMCTS:
                     # Expansion and evaluation
                     value: float = 0
                     if node.is_terminal:
-                        value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore
+                        value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
                     else:
                         value = self.expand(node)
 
@@ -165,8 +165,8 @@ class AlphaZeroMCTS:
                 # Track nodes that need expansion
                 nodes_to_expand: list[Node] = []
 
-                for current_node_index, current_node in enumerate(current_nodes):
-                    node = current_node
+                for current_node_index, next_node in enumerate(current_nodes):
+                    node = next_node
 
                     while node.is_expanded:
                         node = self.select_child(node)
@@ -201,14 +201,14 @@ class AlphaZeroMCTS:
                     )
                 )
 
-                current_node = current_node.select_next_node()
+                next_node = current_node.select_next_node()
 
-                if not current_node.is_terminal:
-                    current_nodes[current_node_index] = current_node
+                if not next_node.is_terminal:
+                    current_nodes[current_node_index] = next_node
                     continue
 
                 # The game ended
-                outcome: list[float] = current_node.state.reward.tolist()  # type: ignore[attr-defined]
+                outcome: list[float] = next_node.state.reward.tolist()  # type: ignore[attr-defined]
 
                 episode_history = episode.samples
                 for i in range(len(episode_history)):
