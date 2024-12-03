@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 
 from simulator.game.connect import Action, State
 
+from alphazero_implementation.mcgs.node import Node
 from alphazero_implementation.mcgs.search import AlphaZeroMCTS
-from alphazero_implementation.mcts_v2.node import Node
 from alphazero_implementation.models.model import Model
 
 
@@ -58,8 +58,13 @@ class AlphaZeroAgent(Agent):
         if self.temperature == float("inf"):
             return random.choice(state.actions)
 
-        agent = AlphaZeroMCTS(self.model)
-        policy = agent.run(Node(state), self.mcts_simulation)
+        agent = AlphaZeroMCTS(
+            model=self.model,
+            num_simulations=self.mcts_simulation,
+            num_episodes=1,
+            game_initial_state=state,
+        )
+        policy = agent.run(Node(state))
 
         if self.temperature == 0:
             action = max(policy.items(), key=lambda x: x[1])[0]
