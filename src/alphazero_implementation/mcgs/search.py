@@ -76,72 +76,12 @@ class AlphaZeroMCTS:
             value = -value  # Switch perspective between players
             node = node.parent
 
-    def run(self, root: Node, num_simulations: int) -> dict[Action, float]:
+    def run(self, root: Node) -> dict[Action, float]:
         """Run the MCTS algorithm for a given number of simulations."""
-        for _ in range(num_simulations):
-            node = root
-
-            # Selection
-            while node.is_expanded:
-                node = self.select_child(node)
-
-            # Expansion and evaluation
-            value: float = 0
-            if node.is_terminal:
-                value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
-            else:
-                value = self.expand(node)
-
-            # Backpropagation
-            self.backpropagate(node, value)
+        current_nodes = [root]
+        self.run_simulations(current_nodes)
 
         return root.improved_policy
-
-    def generate_episodes(
-        self, initial_state: State | None = None
-    ) -> Generator[Episode, None, None]:
-        """Run the MCTS algorithm for a given number of simulations."""
-        if initial_state is None:
-            initial_state = self.game_initial_state
-
-        episode_count = 0
-        while episode_count < self.num_episodes:
-            current_node = Node(initial_state)
-            episode = Episode()
-            episode_count += 1
-            while not current_node.is_terminal:
-                for _ in range(self.num_simulations):
-                    node = current_node
-
-                    # Selection
-                    while node.is_expanded:
-                        node = self.select_child(node)
-
-                    # Expansion and evaluation
-                    value: float = 0
-                    if node.is_terminal:
-                        value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
-                    else:
-                        value = self.expand(node)
-
-                    # Backpropagation
-                    self.backpropagate(node, value)
-
-                episode.add_sample(
-                    Sample(
-                        state=current_node.state,
-                        policy=current_node.improved_policy,
-                        value=[0.0] * current_node.state.config.num_players,
-                    )
-                )
-
-                current_node = current_node.select_next_node()
-
-            # The game ended
-            outcome = current_node.state.reward.tolist()  # type: ignore[attr-defined]
-            episode.backpropagate_outcome(outcome)
-
-            yield episode
 
     def generate_episodes_in_parallel(
         self, initial_state: State | None = None
@@ -178,7 +118,7 @@ class AlphaZeroMCTS:
                     current_nodes[current_node_index] = next_node
                     continue
 
-                # The game ended
+                # The game ended so backpropagate the outcome to the previous game state
                 outcome: list[float] = next_node.state.reward.tolist()  # type: ignore[attr-defined]
                 episode.backpropagate_outcome(outcome)
 
