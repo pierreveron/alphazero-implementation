@@ -4,7 +4,7 @@ import pstats
 from simulator.game.connect import Config  # type: ignore[import]
 
 from alphazero_implementation.alphazero.trainer import AlphaZeroTrainer
-from alphazero_implementation.models.games.connect4.v1 import BasicNN
+from alphazero_implementation.models.games.connect4 import CNNModel
 
 
 def train():
@@ -12,12 +12,14 @@ def train():
     initial_state = config.sample_initial_state()
 
     # Define hyperparameters
-    num_iterations = 10
+    num_iterations = 200
     epochs_per_iter = 10
-    simulations_per_episode = 50
-    episodes_per_iter = 10
+    simulations_per_episode = 100
+    episodes_per_iter = 100
+    save_every_n_iterations = 10
+    buffer_size = episodes_per_iter * save_every_n_iterations
 
-    model = BasicNN(
+    model = CNNModel(
         height=config.height,
         width=config.width,
         max_actions=config.width,
@@ -32,6 +34,8 @@ def train():
                 "epochs_per_iter": epochs_per_iter,
                 "episodes_per_iter": episodes_per_iter,
                 "simulations_per_episode": simulations_per_episode,
+                "buffer_size": buffer_size,
+                "save_every_n_iterations": save_every_n_iterations,
             }
         }
     )
@@ -46,6 +50,8 @@ def train():
         num_iterations=num_iterations,
         epochs_per_iter=epochs_per_iter,
         initial_state=initial_state,
+        buffer_size=buffer_size,
+        save_every_n_iterations=save_every_n_iterations,
     )
 
 

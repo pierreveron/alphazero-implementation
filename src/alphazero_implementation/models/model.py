@@ -1,3 +1,4 @@
+import copy
 from abc import ABC, abstractmethod
 
 import lightning as L
@@ -88,3 +89,9 @@ class Model(ABC, L.LightningModule):
     @abstractmethod
     def _policies_to_tensor(self, policies: list[ActionPolicy]) -> Tensor:
         pass
+
+    def get_inference_clone(self):
+        """Create a clone of the model for inference"""
+        clone = copy.deepcopy(self)
+        clone.eval()  # Set to evaluation mode
+        return clone

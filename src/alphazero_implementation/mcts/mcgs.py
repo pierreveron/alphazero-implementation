@@ -37,10 +37,6 @@ class Node:
         self.action_policy: ActionPolicy = {}
 
     @property
-    def children(self) -> list["Node"]:
-        return [child for (child, _) in self.children_and_edge_visits.values()]
-
-    @property
     def is_terminal(self) -> bool:
         return self.game_state.has_ended
 
