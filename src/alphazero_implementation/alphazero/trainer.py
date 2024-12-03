@@ -6,8 +6,8 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import State  # type: ignore[import]
 
 from alphazero_implementation.alphazero.datamodule import AlphaZeroDataModule
-from alphazero_implementation.mcgs.search import AlphaZeroMCTS
 from alphazero_implementation.models.model import Model
+from alphazero_implementation.search.mcts import AlphaZeroMCTS
 
 
 class AlphaZeroTrainer:

@@ -3,9 +3,8 @@ from abc import ABC, abstractmethod
 
 from simulator.game.connect import Action, State
 
-from alphazero_implementation.mcgs.node import Node
-from alphazero_implementation.mcgs.search import AlphaZeroMCTS
 from alphazero_implementation.models.model import Model
+from alphazero_implementation.search.mcts import AlphaZeroMCTS, Node
 
 
 class Player(ABC):
