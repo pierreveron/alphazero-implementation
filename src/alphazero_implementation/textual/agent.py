@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from simulator.game.connect import Action, State
 
-from alphazero_implementation.mcgs.mcts import AlphaZeroMCTS
+from alphazero_implementation.mcgs.search import AlphaZeroMCTS
 from alphazero_implementation.mcts_v2.node import Node
 from alphazero_implementation.models.model import Model
 
