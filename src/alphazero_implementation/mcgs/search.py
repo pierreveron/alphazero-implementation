@@ -139,10 +139,7 @@ class AlphaZeroMCTS:
 
             # The game ended
             outcome = current_node.state.reward.tolist()  # type: ignore[attr-defined]
-
-            episode_history = episode.samples
-            for i in range(len(episode_history)):
-                episode_history[i].value = outcome
+            episode.backpropagate_outcome(outcome)
 
             yield episode
 
@@ -209,10 +206,7 @@ class AlphaZeroMCTS:
 
                 # The game ended
                 outcome: list[float] = next_node.state.reward.tolist()  # type: ignore[attr-defined]
-
-                episode_history = episode.samples
-                for i in range(len(episode_history)):
-                    episode_history[i].value = outcome
+                episode.backpropagate_outcome(outcome)
 
                 yield episode
 
