@@ -19,6 +19,7 @@ class MCTSAgent:
         parallel_mode: bool = False,
     ):
         self.model = model
+        self.inference_model = model.get_inference_clone()
         self.num_episodes = num_episodes
         self.simulations_per_episode = simulations_per_episode
         self.initial_state = initial_state
@@ -67,11 +68,18 @@ class MCTSAgent:
             }
 
     def select_next_node(self, node: Node) -> Node:
-        """Select the most visited child node and return its action and node."""
-        action = max(
-            node.children_and_edge_visits.items(),
-            key=lambda x: x[1][1],  # x[1][1] is the edge visit count
-        )[0]
+        """Select a child node randomly according to the policy distribution."""
+
+        policy = {
+            action: edge_visits / (node.visit_count - 1)
+            for action, (
+                _,
+                edge_visits,
+            ) in node.children_and_edge_visits.items()
+        }
+
+        index = np.random.choice(len(policy), p=list(policy.values()))
+        action = list(policy.keys())[index]
         next_node = node.children_and_edge_visits[action][0]
         return next_node
 
@@ -82,6 +90,8 @@ class MCTSAgent:
         for _ in range(self.simulations_per_episode):
             # self.mcts_search_recursive(current_node, nodes_by_state)
             self.mcts_search(node, nodes_by_state)
+            if node.is_terminal:
+                break
 
         # Get policy as a probability distribution
         policy = {
@@ -126,7 +136,7 @@ class MCTSAgent:
             node.utility_values = node.game_state.reward.tolist()
         elif node.visit_count == 0:
             # 2. Expansion - If node is unvisited, evaluate with neural network
-            policies, values = self.model.predict([node.game_state])
+            policies, values = self.inference_model.predict([node.game_state])
             node.action_policy = policies[0]
             node.utility_values = values[0]
         else:
@@ -189,7 +199,7 @@ class MCTSAgent:
                 node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
                 break
             elif node.visit_count == 0:  # New node not yet visited
-                policies, values = self.model.predict([node.game_state])
+                policies, values = self.inference_model.predict([node.game_state])
                 node.action_policy = policies[0]
                 node.utility_values = values[0]
                 break
@@ -281,7 +291,9 @@ class MCTSAgent:
                         states_to_evaluate = [
                             node.game_state for node, _ in non_terminal_nodes
                         ]
-                        policies, values = self.model.predict(states_to_evaluate)
+                        policies, values = self.inference_model.predict(
+                            states_to_evaluate
+                        )
 
                         for i, (node, _) in enumerate(non_terminal_nodes):
                             node.action_policy = policies[i]
@@ -398,7 +410,10 @@ class MCTSAgent:
                         states_to_evaluate = [
                             node.game_state for node, _ in non_terminal_nodes
                         ]
-                        policies, values = self.model.predict(states_to_evaluate)
+
+                        policies, values = self.inference_model.predict(
+                            states_to_evaluate
+                        )
 
                         for i, (node, _) in enumerate(non_terminal_nodes):
                             node.action_policy = policies[i]
@@ -415,12 +430,7 @@ class MCTSAgent:
                     for _, path in leaf_nodes:
                         self.backpropagate(path)
 
-            # Calculate improved policies and choose actions
             for current_node_index, current_node in enumerate(current_nodes):
-                if current_node.is_terminal:
-                    continue
-
-                # Get policy as a probability distribution
                 policy = {
                     action: edge_visits / (current_node.visit_count - 1)
                     for action, (
@@ -429,19 +439,27 @@ class MCTSAgent:
                     ) in current_node.children_and_edge_visits.items()
                 }
 
+                if not current_node.is_terminal:
+                    episodes[current_node_index].add_sample(
+                        Sample(
+                            current_node.game_state,
+                            policy,
+                            [0.0] * num_players,
+                        )
+                    )
+
+                    current_nodes[current_node_index] = self.select_next_node(
+                        current_node
+                    )
+                    continue
+
                 episodes[current_node_index].add_sample(
                     Sample(
                         current_node.game_state,
                         policy,
-                        [0.0] * num_players,
+                        current_node.utility_values,
                     )
                 )
-
-                current_nodes[current_node_index] = self.select_next_node(current_node)
-
-            for current_node_index, current_node in enumerate(current_nodes):
-                if not current_node.is_terminal:
-                    continue
 
                 # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
                 outcome = current_node.game_state.reward  # type: ignore[attr-defined]
@@ -460,3 +478,8 @@ class MCTSAgent:
                 nodes_by_state_list[current_node_index] = {
                     self.initial_state: current_nodes[current_node_index]
                 }
+
+    def update_inference_model(self):
+        """Update the inference model with the latest weights from the training model"""
+        self.inference_model.load_state_dict(self.model.state_dict())
+        self.inference_model.eval()

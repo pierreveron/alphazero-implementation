@@ -43,6 +43,7 @@ class Connect4Model(Model):
                 d[action] = prob.item()
             policies.append(d)
 
+        values_tensor = torch.tanh(values_tensor)
         values: list[Value] = values_tensor.detach().tolist()  # type: ignore[attr-defined]
 
         return policies, values
