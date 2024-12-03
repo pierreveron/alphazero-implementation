@@ -140,15 +140,6 @@ class AlphaZeroMCTS:
             # The game ended
             outcome = current_node.state.reward.tolist()  # type: ignore[attr-defined]
 
-            # episode.add_sample(
-            #     Sample(
-            #         state=current_node.state,
-            #         policy={},
-            #         value=outcome,
-            #     )
-            # )
-
-            # Determine game outcome (e.g., +1 for win, -1 for loss, 0 for draw)
             episode_history = episode.samples
             for i in range(len(episode_history)):
                 episode_history[i].value = outcome
