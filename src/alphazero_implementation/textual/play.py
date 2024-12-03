@@ -3,8 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from simulator.game.connect import Config  # type: ignore[import]
 
 from alphazero_implementation.models.games.connect4 import CNNModel
-from alphazero_implementation.textual.agent import AlphaZeroAgent
 from alphazero_implementation.textual.arena import ArenaApp
+from alphazero_implementation.textual.player import AlphaZeroPlayer
 
 
 def play():
@@ -25,8 +25,8 @@ def play():
     ).eval()
 
     with ThreadPoolExecutor() as executor:
-        agent1 = AlphaZeroAgent(model, temperature=0)
-        agent2 = AlphaZeroAgent(model)
+        agent1 = AlphaZeroPlayer(model, temperature=0)
+        agent2 = AlphaZeroPlayer(model)
         app = ArenaApp(agent1, agent2, executor, 2)
         app.run()
 

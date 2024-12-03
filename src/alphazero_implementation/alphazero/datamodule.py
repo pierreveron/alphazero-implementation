@@ -9,8 +9,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from alphazero_implementation.alphazero.types import Episode, Sample
-from alphazero_implementation.mcgs.mcts import AlphaZeroMCTS
 from alphazero_implementation.models.model import Model
+from alphazero_implementation.search.mcts import AlphaZeroMCTS
 
 
 class EpisodeGenerator(threading.Thread):

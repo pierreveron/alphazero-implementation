@@ -59,6 +59,10 @@ class Episode:
     def add_sample(self, sample: Sample) -> None:
         self.samples.append(sample)
 
+    def backpropagate_outcome(self, value: Value) -> None:
+        for sample in self.samples:
+            sample.value = value
+
     @property
     def current_state(self) -> State:
         return self.samples[-1].state
@@ -75,14 +79,3 @@ class Episode:
             Sample.from_dict(sample_data) for sample_data in data["samples"]
         ]
         return episode
-
-
-@dataclass
-class Iteration:
-    """Represents a complete training iteration"""
-
-    episodes: list[Episode]
-    loss: float
-    policy_loss: float
-    value_loss: float
-    accuracy: float

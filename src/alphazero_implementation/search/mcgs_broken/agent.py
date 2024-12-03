@@ -5,8 +5,8 @@ from simulator.game.connect import Action, State  # type: ignore[import]
 
 from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.helpers.timeit import timeit
-from alphazero_implementation.mcts.mcgs import Node
 from alphazero_implementation.models.model import ActionPolicy, Model
+from alphazero_implementation.search.mcgs_broken.node import Node
 
 
 class MCTSAgent:

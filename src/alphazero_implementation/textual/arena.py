@@ -5,7 +5,7 @@ from simulator.textual.connect import ConnectBoard
 from textual.app import App, ComposeResult
 from textual.containers import Grid
 
-from alphazero_implementation.textual.agent import Agent
+from alphazero_implementation.textual.player import Player
 
 
 class ArenaApp(App[None]):
@@ -24,10 +24,10 @@ class ArenaApp(App[None]):
     """
 
     def __init__(
-        self, agent1: Agent, agent2: Agent, executor: Executor, num_games: int
+        self, player1: Player, player2: Player, executor: Executor, num_games: int
     ) -> None:
-        self.agent1 = agent1
-        self.agent2 = agent2
+        self.player1 = player1
+        self.player2 = player2
         self.executor = executor
         self.boards: list[ConnectBoard] = []
         self.num_games = num_games
@@ -47,9 +47,9 @@ class ArenaApp(App[None]):
         board.state = state
         board.styles.border = ("round", "white")
         while not state.has_ended:
-            current_agent = self.agent1 if state.player == 0 else self.agent2
+            current_player = self.player1 if state.player == 0 else self.player2
             action = await loop.run_in_executor(
-                self.executor, current_agent.predict_best_action, state
+                self.executor, current_player.play, state
             )
             state = action.sample_next_state()
             board.state = state

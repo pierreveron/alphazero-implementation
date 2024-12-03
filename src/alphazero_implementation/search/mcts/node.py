@@ -1,5 +1,5 @@
 import numpy as np
-from simulator.game.connect import Action, State
+from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
 
 class Node:
