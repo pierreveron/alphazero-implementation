@@ -39,11 +39,14 @@ class AlphaZeroTrainer:
         buffer_size: int,
         save_every_n_iterations: int,
     ):
-        # Create logger
+        # Create a consistent run name
+        run_name = f"run_{self.run_counter:03d}_{self.model.__class__.__name__}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}"
+
+        # Create logger with the run name
         logger = TensorBoardLogger(
             "lightning_logs",
             name="alphazero",
-            version=f"run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}",
+            version=run_name,
         )
 
         # mcts_agent = MCTSAgent(
@@ -60,13 +63,13 @@ class AlphaZeroTrainer:
             game_initial_state=initial_state,
         )
 
-        # Create data module
+        # Create data module with the same run name
         datamodule = AlphaZeroDataModule(
             model=self.model,
             episode_generator=mcts_agent,
             buffer_size=buffer_size,
             save_every_n_iterations=save_every_n_iterations,
-            save_dir=f"lightning_logs/alphazero/run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}/episodes",
+            save_dir=f"lightning_logs/alphazero/{run_name}/episodes",
         )
 
         # Create checkpoint callback

@@ -21,6 +21,8 @@ class Model(ABC, L.LightningModule):
         super().__init__()
         self.save_hyperparameters()  # This line saves all __init__ arguments as hyperparameters
         self.learning_rate = learning_rate
+        self.model_name = self.__class__.__name__
+        self.save_hyperparameters({"model_name": self.model_name})
 
     def training_step(
         self, batch: tuple[Tensor, Tensor, Tensor], batch_idx: int
