@@ -10,11 +10,11 @@ from torch.utils.data import DataLoader
 
 from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.models.model import Model
-from alphazero_implementation.search.mcts import AlphaZeroMCTS
+from alphazero_implementation.search.mcts import AlphaZeroEpisodeGenerator
 
 
-class EpisodeGenerator(threading.Thread):
-    def __init__(self, agent: AlphaZeroMCTS, buffer: deque[Episode]):
+class EpisodeGeneratorThread(threading.Thread):
+    def __init__(self, agent: AlphaZeroEpisodeGenerator, buffer: deque[Episode]):
         super().__init__(daemon=True)
         self.agent = agent
         self.buffer = buffer
@@ -22,7 +22,7 @@ class EpisodeGenerator(threading.Thread):
         self.lock = threading.Lock()
 
     def run(self):
-        episodes = self.agent.generate_episodes_in_parallel()
+        episodes = self.agent.generate_episodes()
         for episode in episodes:
             if self.stop_event.is_set():
                 break
@@ -37,7 +37,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
     def __init__(
         self,
         model: Model,
-        agent: AlphaZeroMCTS,
+        episode_generator: AlphaZeroEpisodeGenerator,
         buffer_size: int,
         save_every_n_iterations: int,
         batch_size: int = 32,
@@ -48,14 +48,16 @@ class AlphaZeroDataModule(L.LightningDataModule):
     ):
         super().__init__()
         self.model = model
-        self.agent = agent
+        self.episode_generator = episode_generator
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.num_workers = num_workers
         self.persistent_workers = persistent_workers
         self.buffer_size = buffer_size
         self.buffer: deque[Episode] = deque(maxlen=buffer_size)
-        self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
+        self.episode_generator_thread = EpisodeGeneratorThread(
+            self.episode_generator, self.buffer
+        )
         # Setup save directory
         self.save_every_n_iterations = save_every_n_iterations
         self.save_dir = Path(save_dir) if save_dir else Path("episodes")
@@ -64,7 +66,7 @@ class AlphaZeroDataModule(L.LightningDataModule):
 
     def setup(self, stage: str):
         if stage == "fit":
-            self.episode_generator.start()
+            self.episode_generator_thread.start()
 
     def _save_episodes(self):
         """Save current episodes in buffer to disk."""
@@ -89,17 +91,19 @@ class AlphaZeroDataModule(L.LightningDataModule):
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
         # Wait until we have new episodes
         start_time = time.time()
-        while self.episode_generator.is_alive():
+        while self.episode_generator_thread.is_alive():
             time.sleep(0.1)
 
-        self.episode_generator = EpisodeGenerator(self.agent, self.buffer)
-        self.agent.update_inference_model(self.model)
-        self.episode_generator.start()
+        self.episode_generator_thread = EpisodeGeneratorThread(
+            self.episode_generator, self.buffer
+        )
+        self.episode_generator.update_inference_model(self.model)
+        self.episode_generator_thread.start()
 
         waited_time = time.time() - start_time
 
         print(
-            f"Got {self.agent.num_episodes} new episodes in {waited_time:.2f} seconds"
+            f"Got {self.episode_generator.num_episodes} new episodes in {waited_time:.2f} seconds"
         )
 
         # Save the new episodes
@@ -130,5 +134,5 @@ class AlphaZeroDataModule(L.LightningDataModule):
 
     def teardown(self, stage: str):
         if stage == "fit":
-            self.episode_generator.stop()
-            self.episode_generator.join()
+            self.episode_generator_thread.stop()
+            self.episode_generator_thread.join()
