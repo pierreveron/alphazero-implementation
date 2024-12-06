@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
 
 class Node:
-    def __init__(self, state: State, parent: "Node | None" = None, prior: float = 0.0):
+    def __init__(self, state: State, parent: Node | None = None, prior: float = 0.0):
         self.state = state  # The state of the game at this node
         self.parent = parent  # The parent node
         self.children: dict[
@@ -26,7 +28,7 @@ class Node:
             for action, child in self.children.items()
         }
 
-    def select_next_node(self) -> "Node":
+    def select_next_node(self) -> Node:
         """Select the next node according to the improved policy."""
         index = np.random.choice(
             len(self.improved_policy), p=list(self.improved_policy.values())
