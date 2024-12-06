@@ -7,7 +7,7 @@ from simulator.game.connect import State  # type: ignore[import]
 
 from alphazero_implementation.alphazero.datamodule import AlphaZeroDataModule
 from alphazero_implementation.models.model import Model
-from alphazero_implementation.search.mcts import AlphaZeroMCTS
+from alphazero_implementation.search.mcts import AlphaZeroEpisodeGenerator
 
 
 class AlphaZeroTrainer:
@@ -53,7 +53,7 @@ class AlphaZeroTrainer:
         #     initial_state=initial_state,
         #     parallel_mode=True,
         # )
-        mcts_agent = AlphaZeroMCTS(
+        mcts_agent = AlphaZeroEpisodeGenerator(
             model=self.model,
             num_simulations=self.simulations_per_episode,
             num_episodes=self.episodes_per_iter,
@@ -63,7 +63,7 @@ class AlphaZeroTrainer:
         # Create data module
         datamodule = AlphaZeroDataModule(
             model=self.model,
-            agent=mcts_agent,
+            episode_generator=mcts_agent,
             buffer_size=buffer_size,
             save_every_n_iterations=save_every_n_iterations,
             save_dir=f"lightning_logs/alphazero/run_{self.run_counter:03d}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}/episodes",
