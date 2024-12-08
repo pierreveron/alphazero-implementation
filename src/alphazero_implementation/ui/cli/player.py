@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
 from alphazero_implementation.core.search.mcts import AlphaZeroSearch, Node
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.base import Model
 
 
 class Player(ABC):

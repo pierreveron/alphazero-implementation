@@ -4,7 +4,7 @@ import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
 from alphazero_implementation.core.training.episode import Episode, Sample
-from alphazero_implementation.models import ActionPolicy, Model
+from alphazero_implementation.models.base import ActionPolicy, Model
 from alphazero_implementation.utils import timeit
 
 from .node import Node

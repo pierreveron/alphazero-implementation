@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from simulator.game.connect import State  # type: ignore[import]
 from torch import Tensor, nn
 
-from alphazero_implementation.models.model import ActionPolicy, Model, Value
+from ...base import ActionPolicy, Model, Value  # type: ignore[import]
 
 
 class NeuralNetwork(nn.Module):

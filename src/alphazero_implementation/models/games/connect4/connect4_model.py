@@ -2,11 +2,7 @@ import torch
 import torch.nn.functional as F
 from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
-from alphazero_implementation.models.model import (  # type: ignore[import]
-    ActionPolicy,
-    Model,
-    Value,
-)
+from ...base import ActionPolicy, Model, Value  # type: ignore[import]
 
 
 class Connect4Model(Model):
