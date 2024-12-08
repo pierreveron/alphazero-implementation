@@ -1,4 +1,4 @@
-from .v1 import BasicNN
-from .v2 import CNNModel
+from .basic import BasicNN
+from .cnn import CNNModel
 
 __all__ = ["BasicNN", "CNNModel"]

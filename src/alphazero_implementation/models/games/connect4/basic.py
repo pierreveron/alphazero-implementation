@@ -2,7 +2,7 @@ import torch
 from simulator.game.connect import State  # type: ignore[attr-defined]
 from torch import Tensor, nn
 
-from alphazero_implementation.models.games.connect4.connect4_model import Connect4Model
+from .model import Connect4Model
 
 
 class BasicNN(Connect4Model):
