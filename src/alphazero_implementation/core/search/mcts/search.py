@@ -45,14 +45,16 @@ class AlphaZeroSearch:
 
         return best_child  # type: ignore[return-value]
 
-    def backpropagate(self, node: Node | None, value: float):
+    def backpropagate(self, node: Node, value: float):
+        current_node = node
         """Backpropagate the result of a simulation up the tree."""
-        while node is not None:
-            node.value_sum += value
-            node.visit_count += 1
+        while current_node is not None:
+            current_node.value_sum += value
+            current_node.visit_count += 1
 
-            value = -value  # Switch perspective between players
-            node = node.parent
+            if not current_node.is_terminal:
+                value = -value  # Switch perspective between players
+            current_node = current_node.parent
 
     def run(self, root: Node) -> dict[Action, float]:
         """Run the MCTS algorithm for a given number of simulations."""
