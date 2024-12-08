@@ -5,7 +5,7 @@ from simulator.game.connect import State  # type: ignore[attr-defined]
 from simulator.textual.connect import ConnectBoard
 from textual.app import App, ComposeResult
 
-from alphazero_implementation.textual.player import Player
+from .player import Player
 
 
 class AgentApp(App[None]):

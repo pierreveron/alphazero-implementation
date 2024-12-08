@@ -1,10 +1,10 @@
 import random
 from abc import ABC, abstractmethod
 
-from simulator.game.connect import Action, State
+from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
+from alphazero_implementation.core.search.mcts import AlphaZeroSearch, Node
 from alphazero_implementation.models.model import Model
-from alphazero_implementation.search.mcts import AlphaZeroSearch, Node
 
 
 class Player(ABC):

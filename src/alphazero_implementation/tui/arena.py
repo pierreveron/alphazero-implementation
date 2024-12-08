@@ -5,7 +5,7 @@ from simulator.textual.connect import ConnectBoard
 from textual.app import App, ComposeResult
 from textual.containers import Grid
 
-from alphazero_implementation.textual.player import Player
+from .player import Player
 
 
 class ArenaApp(App[None]):
