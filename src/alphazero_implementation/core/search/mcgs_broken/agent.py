@@ -6,7 +6,8 @@ from simulator.game.connect import Action, State  # type: ignore[import]
 from alphazero_implementation.core.training.episode import Episode, Sample
 from alphazero_implementation.helpers.timeit import timeit
 from alphazero_implementation.models import ActionPolicy, Model
-from alphazero_implementation.search.mcgs_broken.node import Node
+
+from .node import Node
 
 
 class MCTSAgent:
@@ -133,7 +134,7 @@ class MCTSAgent:
     def perform_one_playout(self, node: Node, nodes_by_state: dict[State, Node]):
         # 1. Selection - If node is visited, select best child using UCB
         if node.is_terminal:
-            node.utility_values = node.game_state.reward.tolist()
+            node.utility_values = node.game_state.reward.tolist()  # type: ignore[attr-defined]
         elif node.visit_count == 0:
             # 2. Expansion - If node is unvisited, evaluate with neural network
             policies, values = self.inference_model.predict([node.game_state])

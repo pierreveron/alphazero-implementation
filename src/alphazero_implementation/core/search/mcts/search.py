@@ -3,7 +3,8 @@ import math
 from simulator.game.connect import Action  # type: ignore[attr-defined]
 
 from alphazero_implementation.models.model import Model
-from alphazero_implementation.search.mcts.node import Node
+
+from .node import Node
 
 
 class AlphaZeroSearch:
