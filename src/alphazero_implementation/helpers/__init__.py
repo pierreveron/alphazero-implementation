@@ -1,3 +1,3 @@
-from alphazero_implementation.helpers.timeit import timeit
+from .timeit import timeit
 
 __all__ = ["timeit"]
