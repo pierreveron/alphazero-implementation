@@ -44,7 +44,7 @@ class CNNModel(Connect4Model):
         self.policy_head = nn.Linear(512, max_actions)
 
         # Value head
-        self.value_head = nn.Linear(512, num_players)
+        self.value_head = nn.Sequential(nn.Linear(512, num_players), nn.Tanh())
 
         self.learning_rate = 1e-3
 
