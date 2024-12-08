@@ -3,7 +3,7 @@ from typing import Any
 
 from simulator.game.connect import Action, State  # type: ignore[import]
 
-from alphazero_implementation.models.types import ActionPolicy, Value
+from alphazero_implementation.models.prediction_types import ActionPolicy, Value
 
 
 @dataclass

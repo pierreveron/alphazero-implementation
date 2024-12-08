@@ -9,7 +9,7 @@ from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
 from torch.utils.data import TensorDataset
 
-from alphazero_implementation.models.types import ActionPolicy, Value
+from .prediction_types import ActionPolicy, Value
 
 
 class Model(ABC, L.LightningModule):
