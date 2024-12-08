@@ -3,7 +3,7 @@ from typing import Generator
 from simulator.game.connect import State  # type: ignore[attr-defined]
 
 from alphazero_implementation.core.training.episode import Episode, Sample
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.base import Model
 
 from ..search.mcts.node import Node
 from ..search.mcts.search import AlphaZeroSearch

@@ -6,7 +6,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import State  # type: ignore[import]
 
 from alphazero_implementation.core.training import DataModule, EpisodeGenerator
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.base import Model
 
 
 class Trainer:

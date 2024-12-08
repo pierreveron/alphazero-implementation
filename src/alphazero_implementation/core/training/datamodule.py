@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from alphazero_implementation.core.training.episode import Episode, Sample
 from alphazero_implementation.core.training.episode_generator import EpisodeGenerator
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.base import Model
 
 
 class EpisodeGeneratorThread(threading.Thread):

@@ -2,7 +2,7 @@ import math
 
 from simulator.game.connect import Action  # type: ignore[attr-defined]
 
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.base import Model
 
 from .node import Node
 
