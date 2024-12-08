@@ -8,9 +8,11 @@ import lightning as L
 import torch
 from torch.utils.data import DataLoader
 
+from alphazero_implementation.alphazero.episode_generator import (
+    AlphaZeroEpisodeGenerator,
+)
 from alphazero_implementation.alphazero.types import Episode, Sample
 from alphazero_implementation.models.model import Model
-from alphazero_implementation.search.mcts import AlphaZeroEpisodeGenerator
 
 
 class EpisodeGeneratorThread(threading.Thread):
