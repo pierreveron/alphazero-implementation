@@ -2,7 +2,7 @@ import math
 
 from simulator.game.connect import Action, State  # type: ignore[import]
 
-from alphazero_implementation.models.model import ActionPolicy, Value
+from alphazero_implementation.models.base import ActionPolicy, Value
 
 
 class Node:
