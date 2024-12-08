@@ -3,9 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from simulator.game.connect import Config  # type: ignore[import]
 
 from alphazero_implementation.models.games.connect4 import CNNModel
-
-from .arena import ArenaApp
-from .player import AlphaZeroPlayer
+from alphazero_implementation.ui.cli.arena import ArenaApp
+from alphazero_implementation.ui.cli.player import AlphaZeroPlayer
 
 
 def play():
