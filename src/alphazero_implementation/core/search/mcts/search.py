@@ -71,7 +71,7 @@ class AlphaZeroSearch:
                     node = self.select_child(node)
 
                 if node.is_terminal:
-                    value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
+                    value = node.utility_values[node.parent.state.player]  # type: ignore[attr-defined]
                     self.backpropagate(node, value)
                 else:
                     nodes_to_expand.append(node)
