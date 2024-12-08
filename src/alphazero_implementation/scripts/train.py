@@ -1,3 +1,4 @@
+import argparse
 import cProfile
 import pstats
 
@@ -68,4 +69,11 @@ def profile_train():
 
 
 if __name__ == "__main__":
-    profile_train()
+    parser = argparse.ArgumentParser(description="Train the AlphaZero model")
+    parser.add_argument("--profile", action="store_true", help="Enable profiling")
+    args = parser.parse_args()
+
+    if args.profile:
+        profile_train()
+    else:
+        train()
