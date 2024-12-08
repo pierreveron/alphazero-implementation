@@ -56,11 +56,11 @@ class AlphaZeroSearch:
                 value = -value  # Switch perspective between players
             current_node = current_node.parent
 
-    def run(self, root: Node) -> dict[Action, float]:
+    def run(self, root: Node) -> tuple[dict[Action, float], float]:
         """Run the MCTS algorithm for a given number of simulations."""
         current_nodes = [root]
         self.run_simulations(current_nodes)
-        return root.improved_policy
+        return root.improved_policy, root.value
 
     def run_simulations(self, current_nodes: list[Node]) -> None:
         for _ in range(self.num_simulations):
