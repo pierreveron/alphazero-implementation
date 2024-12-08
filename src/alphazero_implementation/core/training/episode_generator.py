@@ -2,13 +2,13 @@ from typing import Generator
 
 from simulator.game.connect import State  # type: ignore[attr-defined]
 
-from alphazero_implementation.alphazero.types import Episode, Sample
+from alphazero_implementation.core.training.episode import Episode, Sample
 from alphazero_implementation.models.model import Model
 from alphazero_implementation.search.mcts.node import Node
 from alphazero_implementation.search.mcts.search import AlphaZeroSearch
 
 
-class AlphaZeroEpisodeGenerator:
+class EpisodeGenerator:
     def __init__(
         self,
         *,

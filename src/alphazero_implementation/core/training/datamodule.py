@@ -8,23 +8,21 @@ import lightning as L
 import torch
 from torch.utils.data import DataLoader
 
-from alphazero_implementation.alphazero.episode_generator import (
-    AlphaZeroEpisodeGenerator,
-)
-from alphazero_implementation.alphazero.types import Episode, Sample
+from alphazero_implementation.core.training.episode import Episode, Sample
+from alphazero_implementation.core.training.episode_generator import EpisodeGenerator
 from alphazero_implementation.models.model import Model
 
 
 class EpisodeGeneratorThread(threading.Thread):
-    def __init__(self, agent: AlphaZeroEpisodeGenerator, buffer: deque[Episode]):
+    def __init__(self, generator: EpisodeGenerator, buffer: deque[Episode]):
         super().__init__(daemon=True)
-        self.agent = agent
+        self.generator = generator
         self.buffer = buffer
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
 
     def run(self):
-        episodes = self.agent.generate_episodes()
+        episodes = self.generator.generate_episodes()
         for episode in episodes:
             if self.stop_event.is_set():
                 break
@@ -35,11 +33,11 @@ class EpisodeGeneratorThread(threading.Thread):
         self.stop_event.set()
 
 
-class AlphaZeroDataModule(L.LightningDataModule):
+class DataModule(L.LightningDataModule):
     def __init__(
         self,
         model: Model,
-        episode_generator: AlphaZeroEpisodeGenerator,
+        episode_generator: EpisodeGenerator,
         buffer_size: int,
         save_every_n_iterations: int,
         batch_size: int = 32,

@@ -5,14 +5,11 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from simulator.game.connect import State  # type: ignore[import]
 
-from alphazero_implementation.alphazero.datamodule import AlphaZeroDataModule
-from alphazero_implementation.alphazero.episode_generator import (
-    AlphaZeroEpisodeGenerator,
-)
+from alphazero_implementation.core.training import DataModule, EpisodeGenerator
 from alphazero_implementation.models.model import Model
 
 
-class AlphaZeroTrainer:
+class Trainer:
     def __init__(
         self,
         model: Model,
@@ -58,7 +55,7 @@ class AlphaZeroTrainer:
         #     initial_state=initial_state,
         #     parallel_mode=True,
         # )
-        mcts_agent = AlphaZeroEpisodeGenerator(
+        mcts_agent = EpisodeGenerator(
             model=self.model,
             num_simulations=self.simulations_per_episode,
             num_episodes=self.episodes_per_iter,
@@ -66,7 +63,7 @@ class AlphaZeroTrainer:
         )
 
         # Create data module with the same run name
-        datamodule = AlphaZeroDataModule(
+        datamodule = DataModule(
             model=self.model,
             episode_generator=mcts_agent,
             buffer_size=buffer_size,

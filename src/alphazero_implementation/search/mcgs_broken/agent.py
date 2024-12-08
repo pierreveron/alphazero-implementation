@@ -3,7 +3,7 @@ from typing import Generator
 import numpy as np
 from simulator.game.connect import Action, State  # type: ignore[import]
 
-from alphazero_implementation.alphazero.types import Episode, Sample
+from alphazero_implementation.core.training.episode import Episode, Sample
 from alphazero_implementation.helpers.timeit import timeit
 from alphazero_implementation.models import ActionPolicy, Model
 from alphazero_implementation.search.mcgs_broken.node import Node

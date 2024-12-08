@@ -3,7 +3,7 @@ import pstats
 
 from simulator.game.connect import Config  # type: ignore[import]
 
-from alphazero_implementation.alphazero.trainer import AlphaZeroTrainer
+from alphazero_implementation.core.training import Trainer
 from alphazero_implementation.models.games.connect4 import CNNModel
 
 
@@ -40,7 +40,7 @@ def train():
         }
     )
 
-    trainer = AlphaZeroTrainer(
+    trainer = Trainer(
         model=model,
         episodes_per_iter=episodes_per_iter,
         simulations_per_episode=simulations_per_episode,
