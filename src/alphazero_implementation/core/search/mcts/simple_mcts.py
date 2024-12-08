@@ -4,7 +4,7 @@ from typing import Generator
 from simulator.game.connect import Action, State  # type: ignore[attr-defined]
 
 from alphazero_implementation.core.training.episode import Episode, Sample
-from alphazero_implementation.models.model import Model
+from alphazero_implementation.models.base import Model
 
 from .node import Node
 
@@ -88,7 +88,7 @@ class SimpleMCTS:
             # Expansion and evaluation
             value: float = 0
             if node.is_terminal:
-                value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
+                value = node.utility_values[node.parent.state.player]  # type: ignore[attr-defined]
             else:
                 value = self.expand(node)
 
@@ -118,7 +118,7 @@ class SimpleMCTS:
                     # Expansion and evaluation
                     value: float = 0
                     if node.is_terminal:
-                        value = node.state.reward.tolist()[node.parent.state.player]  # type: ignore[attr-defined]
+                        value = node.utility_values[node.parent.state.player]  # type: ignore[attr-defined]
                     else:
                         value = self.expand(node)
 
@@ -136,7 +136,6 @@ class SimpleMCTS:
                 current_node = current_node.select_next_node()
 
             # The game ended
-            outcome = current_node.state.reward.tolist()  # type: ignore[attr-defined]
-            episode.backpropagate_outcome(outcome)
+            episode.backpropagate_outcome(current_node.utility_values)
 
             yield episode
