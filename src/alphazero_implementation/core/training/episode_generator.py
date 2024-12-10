@@ -68,8 +68,7 @@ class EpisodeGenerator:
                     continue
 
                 # The game ended so backpropagate the outcome to the previous game state
-                outcome: list[float] = next_node.state.reward.tolist()  # type: ignore[attr-defined]
-                episode.backpropagate_outcome(outcome)
+                episode.backpropagate_outcome(next_node.utility_values)
 
                 yield episode
 

@@ -58,6 +58,11 @@ class Node:
         return self.state.has_ended
 
     @property
+    def utility_values(self) -> list[float]:
+        """The utility values of this node."""
+        return self.state.reward.tolist()  # type: ignore[attr-defined]
+
+    @property
     def is_leaf(self) -> bool:
         """Check if the node is a leaf node (no children)."""
         return len(self.children) == 0
