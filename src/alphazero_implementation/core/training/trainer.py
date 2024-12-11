@@ -13,13 +13,8 @@ class Trainer:
     def __init__(
         self,
         model: Model,
-        episodes_per_iter: int = 100,
-        simulations_per_episode: int = 800,
     ):
         self.model = model
-        self.simulations_per_episode = simulations_per_episode
-        self.episodes_per_iter = episodes_per_iter
-        self.run_counter = self._get_next_run_number()
 
     def _get_next_run_number(self):
         base_dir = "lightning_logs/alphazero"
@@ -32,14 +27,18 @@ class Trainer:
 
     def train(
         self,
+        *,
         num_iterations: int,
+        episodes_per_iter: int,
+        simulations_per_episode: int,
         epochs_per_iter: int,
         initial_state: State,
         buffer_size: int,
         save_every_n_iterations: int,
     ):
         # Create a consistent run name
-        run_name = f"run_{self.run_counter:03d}_{self.model.__class__.__name__}_iter{num_iterations}_episodes{self.episodes_per_iter}_sims{self.simulations_per_episode}"
+        run_counter = self._get_next_run_number()
+        run_name = f"run_{run_counter:03d}_{self.model.__class__.__name__}_iter{num_iterations}_episodes{episodes_per_iter}_sims{simulations_per_episode}"
 
         # Create logger with the run name
         logger = TensorBoardLogger(
@@ -48,24 +47,17 @@ class Trainer:
             version=run_name,
         )
 
-        # mcts_agent = MCTSAgent(
-        #     model=self.model,
-        #     num_episodes=self.episodes_per_iter,
-        #     simulations_per_episode=self.simulations_per_episode,
-        #     initial_state=initial_state,
-        #     parallel_mode=True,
-        # )
-        mcts_agent = EpisodeGenerator(
+        episode_generator = EpisodeGenerator(
             model=self.model,
-            num_simulations=self.simulations_per_episode,
-            num_episodes=self.episodes_per_iter,
+            num_simulations=simulations_per_episode,
+            num_episodes=episodes_per_iter,
             game_initial_state=initial_state,
         )
 
         # Create data module with the same run name
         datamodule = DataModule(
             model=self.model,
-            episode_generator=mcts_agent,
+            episode_generator=episode_generator,
             buffer_size=buffer_size,
             save_every_n_iterations=save_every_n_iterations,
             save_dir=f"lightning_logs/alphazero/{run_name}/episodes",
@@ -73,7 +65,7 @@ class Trainer:
 
         # Create checkpoint callback
         checkpoint_callback = ModelCheckpoint(
-            # filename="{epoch}-{val_loss:.2f}-{other_metric:.2f}",
+            # filename="{epoch}-{train_loss:.2f}",
             every_n_epochs=save_every_n_iterations * epochs_per_iter,
             save_top_k=-1,  # Keep all checkpoints
         )
@@ -85,7 +77,7 @@ class Trainer:
             enable_progress_bar=True,
             logger=logger,
             reload_dataloaders_every_n_epochs=epochs_per_iter,
-            callbacks=[checkpoint_callback],  # Add the checkpoint callback
+            callbacks=[checkpoint_callback],
         )
 
         # Train the model
