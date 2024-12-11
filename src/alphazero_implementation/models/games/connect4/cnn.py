@@ -6,8 +6,8 @@ from .model import Connect4Model
 
 
 class CNNModel(Connect4Model):
-    def __init__(self, height: int, width: int, max_actions: int, num_players: int):
-        super().__init__(height, width, max_actions, num_players)
+    def __init__(self, height: int, width: int):
+        super().__init__(height, width)
 
         # Parameters for CNN layers
         self.channels = [
@@ -41,10 +41,13 @@ class CNNModel(Connect4Model):
         )
 
         # Policy head
-        self.policy_head = nn.Linear(512, max_actions)
+        self.policy_head = nn.Linear(512, width)
 
         # Value head
-        self.value_head = nn.Sequential(nn.Linear(512, num_players), nn.Tanh())
+        self.value_head = nn.Sequential(
+            nn.Linear(512, 2),
+            nn.Tanh(),
+        )
 
         self.learning_rate = 1e-3
 

@@ -23,8 +23,6 @@ def train():
     model = CNNModel(
         height=config.height,
         width=config.width,
-        max_actions=config.width,
-        num_players=config.num_players,
     )
 
     # Save hyperparameters
