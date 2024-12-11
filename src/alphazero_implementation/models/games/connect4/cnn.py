@@ -45,7 +45,7 @@ class CNNModel(Connect4Model):
 
         # Value head
         self.value_head = nn.Sequential(
-            nn.Linear(512, 2),
+            nn.Linear(512, 1),
             nn.Tanh(),
         )
 
@@ -67,6 +67,10 @@ class CNNModel(Connect4Model):
         # Output heads
         policy_logits = self.policy_head(shared_output)
         value = self.value_head(shared_output)
+
+        # Concatenate value and its negative along dim=1
+        # Result shape: [batch_size, 2]
+        value = torch.cat([value, -value], dim=1)
 
         return policy_logits, value
 
