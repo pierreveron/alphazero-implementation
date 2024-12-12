@@ -34,7 +34,12 @@ class Node:
             len(self.improved_policy), p=list(self.improved_policy.values())
         )
         action = list(self.improved_policy.keys())[index]
-        return self.children[action]
+        new_node = Node(
+            state=action.sample_next_state(),
+            parent=self,
+            prior=self.improved_policy[action],
+        )
+        return new_node
 
     def add_child(self, action: Action, child_state: State, prior: float):
         """Add a child node for a given action and state."""
@@ -61,11 +66,6 @@ class Node:
     def utility_values(self) -> list[float]:
         """The utility values of this node."""
         return self.state.reward.tolist()  # type: ignore[attr-defined]
-
-    @property
-    def is_leaf(self) -> bool:
-        """Check if the node is a leaf node (no children)."""
-        return len(self.children) == 0
 
     @property
     def is_root(self) -> bool:

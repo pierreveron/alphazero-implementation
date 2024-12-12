@@ -23,8 +23,6 @@ def train():
     model = CNNModel(
         height=config.height,
         width=config.width,
-        max_actions=config.width,
-        num_players=config.num_players,
     )
 
     # Save hyperparameters
@@ -43,13 +41,13 @@ def train():
 
     trainer = Trainer(
         model=model,
-        episodes_per_iter=episodes_per_iter,
-        simulations_per_episode=simulations_per_episode,
     )
 
     trainer.train(
         num_iterations=num_iterations,
         epochs_per_iter=epochs_per_iter,
+        episodes_per_iter=episodes_per_iter,
+        simulations_per_episode=simulations_per_episode,
         initial_state=initial_state,
         buffer_size=buffer_size,
         save_every_n_iterations=save_every_n_iterations,
