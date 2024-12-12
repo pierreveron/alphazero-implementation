@@ -1,9 +1,15 @@
-import torch
+from __future__ import annotations
+
 import math
+from typing import Any
+
 import numpy as np
 
+from .connect4_game import Connect4Game
+from .connect4_model import Connect4Model
 
-def ucb_score(parent, child):
+
+def ucb_score(parent: Node, child: Node) -> float:
     """
     The score for an action that would transition between the parent and child.
     """
@@ -18,13 +24,13 @@ def ucb_score(parent, child):
 
 
 class Node:
-    def __init__(self, prior, to_play):
+    def __init__(self, prior: float, to_play: int):
         self.visit_count = 0
         self.to_play = to_play
         self.prior = prior
         self.value_sum = 0
-        self.children = {}
-        self.state = None
+        self.children: dict[int, Node] = {}
+        self.state: np.ndarray | None = None
 
     def expanded(self):
         return len(self.children) > 0
@@ -34,7 +40,7 @@ class Node:
             return 0
         return self.value_sum / self.visit_count
 
-    def select_action(self, temperature):
+    def select_action(self, temperature: float) -> int:
         """
         Select action according to the visit count distribution and the temperature.
         """
@@ -47,12 +53,14 @@ class Node:
         else:
             # See paper appendix Data Generation
             visit_count_distribution = visit_counts ** (1 / temperature)
-            visit_count_distribution = visit_count_distribution / sum(visit_count_distribution)
+            visit_count_distribution = visit_count_distribution / sum(
+                visit_count_distribution
+            )
             action = np.random.choice(actions, p=visit_count_distribution)
 
         return action
 
-    def select_child(self):
+    def select_child(self) -> tuple[int, Node]:
         """
         Select the child with the highest UCB score.
         """
@@ -69,7 +77,7 @@ class Node:
 
         return best_action, best_child
 
-    def expand(self, state, to_play, action_probs):
+    def expand(self, state: np.ndarray, to_play: int, action_probs: np.ndarray) -> None:
         """
         We expand a node and keep track of the prior policy probability given by neural network
         """
@@ -84,18 +92,18 @@ class Node:
         Debugger pretty print node info
         """
         prior = "{0:.2f}".format(self.prior)
-        return "{} Prior: {} Count: {} Value: {}".format(self.state.__str__(), prior, self.visit_count, self.value())
+        return "{} Prior: {} Count: {} Value: {}".format(
+            self.state.__str__(), prior, self.visit_count, self.value()
+        )
 
 
 class MCTS:
-
-    def __init__(self, game, model, args):
+    def __init__(self, game: Connect4Game, model: Connect4Model, args: dict[str, Any]):
         self.game = game
         self.model = model
         self.args = args
 
-    def run(self, model, state, to_play):
-
+    def run(self, model: Connect4Model, state: np.ndarray, to_play: int) -> Node:
         root = Node(0, to_play)
 
         # EXPAND root
@@ -105,7 +113,7 @@ class MCTS:
         action_probs /= np.sum(action_probs)
         root.expand(state, to_play, action_probs)
 
-        for _ in range(self.args['num_simulations']):
+        for _ in range(self.args["num_simulations"]):
             node = root
             search_path = [node]
 

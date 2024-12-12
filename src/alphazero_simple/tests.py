@@ -1,20 +1,21 @@
-import numpy as np
 import unittest
-from monte_carlo_tree_search import Node, MCTS, ucb_score
-from game import Connect2Game
+
+import numpy as np
+
+from .connect2_game import Connect2Game
+from .monte_carlo_tree_search import MCTS, Node, ucb_score
 
 
 class MCTSTests(unittest.TestCase):
-
     def test_mcts_from_root_with_equal_priors(self):
         class MockModel:
-            def predict(self, board):
+            def predict(self, board: np.ndarray) -> tuple[np.ndarray, float]:
                 # starting board is:
                 # [0, 0, 1, -1]
                 return np.array([0.26, 0.24, 0.24, 0.26]), 0.0001
 
         game = Connect2Game()
-        args = {'num_simulations': 50}
+        args = {"num_simulations": 50}
 
         model = MockModel()
         mcts = MCTS(game, model, args)
@@ -23,8 +24,12 @@ class MCTSTests(unittest.TestCase):
         root = mcts.run(model, canonical_board, to_play=1)
 
         # the best move is to play at index 1 or 2
-        best_outer_move = max(root.children[0].visit_count, root.children[0].visit_count)
-        best_center_move = max(root.children[1].visit_count, root.children[2].visit_count)
+        best_outer_move = max(
+            root.children[0].visit_count, root.children[0].visit_count
+        )
+        best_center_move = max(
+            root.children[1].visit_count, root.children[2].visit_count
+        )
         self.assertGreater(best_center_move, best_outer_move)
 
     def test_mcts_finds_best_move_with_really_bad_priors(self):
@@ -35,7 +40,7 @@ class MCTSTests(unittest.TestCase):
                 return np.array([0.3, 0.7, 0, 0]), 0.0001
 
         game = Connect2Game()
-        args = {'num_simulations': 25}
+        args = {"num_simulations": 25}
 
         model = MockModel()
         mcts = MCTS(game, model, args)
@@ -47,13 +52,12 @@ class MCTSTests(unittest.TestCase):
         self.assertGreater(root.children[1].visit_count, root.children[0].visit_count)
 
     def test_mcts_finds_best_move_with_equal_priors(self):
-
         class MockModel:
             def predict(self, board):
                 return np.array([0.51, 0.49, 0, 0]), 0.0001
 
         game = Connect2Game()
-        args = { 'num_simulations': 25 }
+        args = {"num_simulations": 25}
 
         model = MockModel()
         mcts = MCTS(game, model, args)
@@ -71,7 +75,7 @@ class MCTSTests(unittest.TestCase):
                 return np.array([0, 0.3, 0.3, 0.3]), 0.0001
 
         game = Connect2Game()
-        args = {'num_simulations': 100}
+        args = {"num_simulations": 100}
 
         model = MockModel()
         mcts = MCTS(game, model, args)
@@ -82,8 +86,8 @@ class MCTSTests(unittest.TestCase):
         self.assertGreater(root.children[1].visit_count, root.children[2].visit_count)
         self.assertGreater(root.children[1].visit_count, root.children[3].visit_count)
 
-class NodeTests(unittest.TestCase):
 
+class NodeTests(unittest.TestCase):
     def test_initialization(self):
         node = Node(0.5, to_play=1)
 
@@ -237,6 +241,5 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(score_3, node.children[3].prior)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
