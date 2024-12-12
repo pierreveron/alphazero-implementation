@@ -1,14 +1,16 @@
 import os
 from random import shuffle
 
+import lightning as L
 import numpy as np
 import torch
-from torch import optim
-from torch.utils.tensorboard.writer import SummaryWriter
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from .config import AlphaZeroConfig
 from .connect4_game import Connect4Game
 from .connect4_model import Connect4Model
+from .lightning_data import AlphaZeroDataModule
+from .lightning_model import AlphaZeroLitModule
 from .monte_carlo_tree_search import MCTS
 
 
@@ -25,7 +27,6 @@ class Trainer:
         self.device = device
         self.config = config
         self.mcts = MCTS(self.game, self.model, self.config)
-        self.writer = SummaryWriter(os.path.join("runs", "default_run"))
 
     def execute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
         train_examples = []
@@ -85,88 +86,26 @@ class Trainer:
             self.save_checkpoint(folder=".", filename=filename)
 
     def train(self, examples):
-        optimizer = optim.Adam(self.model.parameters(), lr=5e-4)
-        pi_losses = []
-        v_losses = []
+        # Create Lightning components
+        lit_model = AlphaZeroLitModule(self.model)
+        data_module = AlphaZeroDataModule(examples, batch_size=self.config.batch_size)
 
-        for epoch in range(self.config.epochs):
-            self.model.train()
-            epoch_pi_losses = []
-            epoch_v_losses = []
-            batch_idx = 0
+        logger = TensorBoardLogger(save_dir="lightning_logs", name="alphazero_simple")
 
-            while batch_idx < int(len(examples) / self.config.batch_size):
-                sample_ids = np.random.randint(
-                    len(examples), size=self.config.batch_size
-                )
-                boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
-                boards = torch.FloatTensor(np.array(boards).astype(np.float64))
-                target_pis = torch.FloatTensor(np.array(pis))
-                target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
+        # Create Lightning trainer
+        trainer = L.Trainer(
+            max_epochs=self.config.epochs,
+            accelerator="auto",
+            devices=1,
+            logger=logger,
+            enable_progress_bar=True,
+        )
 
-                # predict
-                boards = boards.contiguous().to(self.device)
-                target_pis = target_pis.contiguous().to(self.device)
-                target_vs = target_vs.contiguous().to(self.device)
+        # Train the model
+        trainer.fit(lit_model, data_module)
 
-                # compute output
-                out_pi, out_v = self.model(boards)
-                l_pi = self.loss_pi(target_pis, out_pi)
-                l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
-
-                pi_losses.append(float(l_pi))
-                v_losses.append(float(l_v))
-                epoch_pi_losses.append(float(l_pi))
-                epoch_v_losses.append(float(l_v))
-
-                # Log batch losses
-                global_step = (
-                    epoch * int(len(examples) / self.config.batch_size) + batch_idx
-                )
-                self.writer.add_scalar(
-                    "Loss/train/policy_loss", float(l_pi), global_step
-                )
-                self.writer.add_scalar("Loss/train/value_loss", float(l_v), global_step)
-                self.writer.add_scalar(
-                    "Loss/train/total_loss", float(total_loss), global_step
-                )
-
-                optimizer.zero_grad()
-                total_loss.backward()
-                optimizer.step()
-
-                batch_idx += 1
-
-            # Log epoch average losses
-            epoch_pi_loss = np.mean(epoch_pi_losses)
-            epoch_v_loss = np.mean(epoch_v_losses)
-            self.writer.add_scalar("Loss/epoch/policy_loss", epoch_pi_loss, epoch)
-            self.writer.add_scalar("Loss/epoch/value_loss", epoch_v_loss, epoch)
-
-            # Log example predictions vs targets
-            if epoch % 10 == 0:  # Log every 10 epochs to avoid too much data
-                self.writer.add_histogram(
-                    "Predictions/policy", out_pi[0].detach(), epoch
-                )
-                self.writer.add_histogram("Targets/policy", target_pis[0], epoch)
-                self.writer.add_histogram("Predictions/value", out_v.detach(), epoch)
-                self.writer.add_histogram("Targets/value", target_vs, epoch)
-
-            print()
-            print("Policy Loss", epoch_pi_loss)
-            print("Value Loss", epoch_v_loss)
-            print("Examples:")
-            print(out_pi[0].detach())
-            print(target_pis[0])
-
-    def loss_pi(self, targets, outputs):
-        loss = -(targets * torch.log(outputs)).sum(dim=1)
-        return loss.mean()
-
-    def loss_v(self, targets, outputs):
-        loss = torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
-        return loss
+        # Update the original model with trained weights
+        self.model.load_state_dict(lit_model.model.state_dict())
 
     def save_checkpoint(self, folder, filename):
         if not os.path.exists(folder):
@@ -179,7 +118,3 @@ class Trainer:
             },
             filepath,
         )
-
-    def __del__(self):
-        # Close the tensorboard writer when the trainer is destroyed
-        self.writer.close()
