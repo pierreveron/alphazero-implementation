@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import math
-from typing import Any
 
 import numpy as np
 
+from .config import AlphaZeroConfig
 from .connect4_game import Connect4Game
 from .connect4_model import Connect4Model
 
@@ -98,10 +98,12 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, game: Connect4Game, model: Connect4Model, args: dict[str, Any]):
+    def __init__(
+        self, game: Connect4Game, model: Connect4Model, config: AlphaZeroConfig
+    ):
         self.game = game
         self.model = model
-        self.args = args
+        self.config = config
 
     def run(self, model: Connect4Model, state: np.ndarray, to_play: int) -> Node:
         root = Node(0, to_play)
@@ -113,7 +115,7 @@ class MCTS:
         action_probs /= np.sum(action_probs)
         root.expand(state, to_play, action_probs)
 
-        for _ in range(self.args["num_simulations"]):
+        for _ in range(self.config.num_simulations):
             node = root
             search_path = [node]
 

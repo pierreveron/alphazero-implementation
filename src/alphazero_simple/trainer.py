@@ -1,12 +1,12 @@
 import os
 from random import shuffle
-from typing import Any
 
 import numpy as np
 import torch
 from torch import optim
 from torch.utils.tensorboard.writer import SummaryWriter
 
+from .config import AlphaZeroConfig
 from .connect4_game import Connect4Game
 from .connect4_model import Connect4Model
 from .monte_carlo_tree_search import MCTS
@@ -18,16 +18,14 @@ class Trainer:
         game: Connect4Game,
         model: Connect4Model,
         device: torch.device,
-        args: dict[str, Any],
+        config: AlphaZeroConfig,
     ):
         self.game = game
         self.model = model
         self.device = device
-        self.args = args
-        self.mcts = MCTS(self.game, self.model, self.args)
-        self.writer = SummaryWriter(
-            os.path.join("runs", args.get("exp_name", "default_run"))
-        )
+        self.config = config
+        self.mcts = MCTS(self.game, self.model, self.config)
+        self.writer = SummaryWriter(os.path.join("runs", "default_run"))
 
     def execute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
         train_examples = []
@@ -37,7 +35,7 @@ class Trainer:
         while True:
             canonical_board = self.game.get_canonical_board(state, current_player)
 
-            self.mcts = MCTS(self.game, self.model, self.args)
+            self.mcts = MCTS(self.game, self.model, self.config)
             root = self.mcts.run(self.model, canonical_board, to_play=1)
 
             action_probs = [0 for _ in range(self.game.get_action_size())]
@@ -72,18 +70,18 @@ class Trainer:
                 return ret
 
     def learn(self):
-        for i in range(1, self.args["numIters"] + 1):
-            print("{}/{}".format(i, self.args["numIters"]))
+        for i in range(1, self.config.num_iterations + 1):
+            print("{}/{}".format(i, self.config.num_iterations))
 
             train_examples = []
 
-            for eps in range(self.args["numEps"]):
+            for eps in range(self.config.num_episodes):
                 iteration_train_examples = self.execute_episode()
                 train_examples.extend(iteration_train_examples)
 
             shuffle(train_examples)
             self.train(train_examples)
-            filename = self.args["checkpoint_path"]
+            filename = self.config.checkpoint_path
             self.save_checkpoint(folder=".", filename=filename)
 
     def train(self, examples):
@@ -91,15 +89,15 @@ class Trainer:
         pi_losses = []
         v_losses = []
 
-        for epoch in range(self.args["epochs"]):
+        for epoch in range(self.config.epochs):
             self.model.train()
             epoch_pi_losses = []
             epoch_v_losses = []
             batch_idx = 0
 
-            while batch_idx < int(len(examples) / self.args["batch_size"]):
+            while batch_idx < int(len(examples) / self.config.batch_size):
                 sample_ids = np.random.randint(
-                    len(examples), size=self.args["batch_size"]
+                    len(examples), size=self.config.batch_size
                 )
                 boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
                 boards = torch.FloatTensor(np.array(boards).astype(np.float64))
@@ -124,7 +122,7 @@ class Trainer:
 
                 # Log batch losses
                 global_step = (
-                    epoch * int(len(examples) / self.args["batch_size"]) + batch_idx
+                    epoch * int(len(examples) / self.config.batch_size) + batch_idx
                 )
                 self.writer.add_scalar(
                     "Loss/train/policy_loss", float(l_pi), global_step
