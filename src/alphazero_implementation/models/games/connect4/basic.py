@@ -26,8 +26,6 @@ class BasicNN(Connect4Model):
             nn.Tanh(),
         )
 
-        self.learning_rate = 1e-3
-
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
         # Move input tensor to the same device as the model
         x = x.to(self.shared_layers[0].weight.device)
@@ -47,24 +45,3 @@ class BasicNN(Connect4Model):
         grids: list[NDArray[np.float64]] = [state.grid for state in states]  # type: ignore[attr-defined]
         stacked = np.stack(grids)
         return torch.tensor(stacked, dtype=torch.float32)
-
-    # def _states_to_tensor(self, states: list[State]) -> Tensor:
-    #     batch_size = len(states)
-    #     first_state = states[0]
-    #     height, width = first_state.config.height, first_state.config.width
-
-    #     # Initialize tensors for all states
-    #     inputs = torch.zeros((batch_size, 3, height, width))
-
-    #     for i, state in enumerate(states):
-    #         tensor = torch.tensor(state.grid)  # type: ignore[arg-type]
-
-    #         # Create the three channels
-    #         available_moves = (tensor[0] == -1).float()  # Top row for available moves
-    #         current_player = (tensor == state.player).float()
-    #         opponent = (tensor == (1 - state.player)).float()
-
-    #         # Stack the channels for this state
-    #         inputs[i] = torch.stack([available_moves, current_player, opponent])
-
-    #     return inputs
