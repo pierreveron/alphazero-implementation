@@ -29,7 +29,7 @@ class Trainer:
             os.path.join("runs", args.get("exp_name", "default_run"))
         )
 
-    def exceute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
+    def execute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
         train_examples = []
         current_player = 1
         state = self.game.get_init_board()
@@ -78,7 +78,7 @@ class Trainer:
             train_examples = []
 
             for eps in range(self.args["numEps"]):
-                iteration_train_examples = self.exceute_episode()
+                iteration_train_examples = self.execute_episode()
                 train_examples.extend(iteration_train_examples)
 
             shuffle(train_examples)
