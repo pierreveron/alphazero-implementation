@@ -1,15 +1,12 @@
 import numpy as np
-
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class Connect2Model(nn.Module):
-
-    def __init__(self, board_size, action_size, device):
-
-        super(Connect2Model, self).__init__()
+    def __init__(self, board_size: int, action_size: int, device: torch.device):
+        super(Connect2Model, self).__init__()  # type: ignore[no-untyped-call]
 
         self.device = device
         self.size = board_size
