@@ -6,8 +6,8 @@ from .model import Connect4Model
 
 
 class CNNModel(Connect4Model):
-    def __init__(self, height: int, width: int):
-        super().__init__(height, width)
+    def __init__(self):
+        super().__init__()
 
         # Parameters for CNN layers
         self.channels = [
@@ -31,7 +31,7 @@ class CNNModel(Connect4Model):
         )
 
         # Calculate size after CNN layers
-        self.conv_output_size = self.channels[-1] * height * width
+        self.conv_output_size = self.channels[-1] * self.board_height * self.board_width
 
         # Fully connected layers
         self.shared_layers = nn.Sequential(
@@ -41,7 +41,7 @@ class CNNModel(Connect4Model):
         )
 
         # Policy head
-        self.policy_head = nn.Linear(512, width)
+        self.policy_head = nn.Linear(512, self.board_width)
 
         # Value head
         self.value_head = nn.Sequential(

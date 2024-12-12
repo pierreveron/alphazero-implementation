@@ -6,19 +6,19 @@ from .model import Connect4Model
 
 
 class BasicNN(Connect4Model):
-    def __init__(self, height: int, width: int):
-        super().__init__(height, width)
+    def __init__(self):
+        super().__init__()
 
         self.flatten = nn.Flatten()
         self.shared_layers = nn.Sequential(
-            nn.Linear(height * width, 512),
+            nn.Linear(self.board_height * self.board_width, 512),
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
         )
 
         # Policy head
-        self.policy_head = nn.Linear(512, self.width)
+        self.policy_head = nn.Linear(512, self.board_width)
 
         # Value head
         self.value_head = nn.Sequential(

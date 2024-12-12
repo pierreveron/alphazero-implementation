@@ -11,10 +11,10 @@ class Connect4Model(Model):
     the prediction process for all Connect4 models.
     """
 
-    def __init__(self, height: int, width: int):
+    def __init__(self):
         super().__init__()
-        self.height = height
-        self.width = width
+        self.board_height = 6
+        self.board_width = 7
 
     def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
         x = self._states_to_tensor(states)
@@ -42,7 +42,7 @@ class Connect4Model(Model):
         return policies, values
 
     def _policies_to_tensor(self, policies: list[ActionPolicy]) -> torch.Tensor:
-        policy_targets = torch.zeros((len(policies), self.width))
+        policy_targets = torch.zeros((len(policies), self.board_width))
         for i, policy in enumerate(policies):
             for action, prob in policy.items():
                 column = action.column
