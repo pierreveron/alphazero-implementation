@@ -16,6 +16,7 @@ class Connect4Model(Model):
         self.board_height = 6
         self.board_width = 7
 
+    @torch.no_grad()  # type: ignore[attr-defined]
     def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
         x = self._states_to_tensor(states)
 
