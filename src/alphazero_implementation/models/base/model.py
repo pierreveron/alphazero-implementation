@@ -47,8 +47,7 @@ class Model(ABC, L.LightningModule):
 
     def configure_optimizers(self):
         # Deepmind's AlphaZero paper uses RMSProp with a learning rate of 0.001
-        # optimizer = torch.optim.RMSprop(self.model.parameters(), lr=0.001)
-        return Adam(self.parameters(), lr=self.learning_rate)
+        return Adam(self.parameters(), lr=self.learning_rate, weight_decay=1e-4)
 
     @abstractmethod
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
