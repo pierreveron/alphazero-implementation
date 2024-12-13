@@ -5,8 +5,8 @@ import math
 import numpy as np
 
 from .base_game import BaseGame
+from .base_model import BaseModel
 from .config import AlphaZeroConfig
-from .model_protocol import GameModel
 
 
 def ucb_score(parent: Node, child: Node) -> float:
@@ -98,12 +98,12 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, game: BaseGame, model: GameModel, config: AlphaZeroConfig):
+    def __init__(self, game: BaseGame, model: BaseModel, config: AlphaZeroConfig):
         self.game = game
         self.model = model
         self.config = config
 
-    def run(self, model: GameModel, state: np.ndarray, to_play: int) -> Node:
+    def run(self, model: BaseModel, state: np.ndarray, to_play: int) -> Node:
         root = Node(0, to_play)
 
         # EXPAND root
@@ -145,7 +145,7 @@ class MCTS:
 
         return root
 
-    def backpropagate(self, search_path, value, to_play):
+    def backpropagate(self, search_path: list[Node], value: np.ndarray, to_play: int):
         """
         At the end of a simulation, we propagate the evaluation all the way up the tree
         to the root.

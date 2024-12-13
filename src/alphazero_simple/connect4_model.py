@@ -3,10 +3,10 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from .model_protocol import GameModel
+from .base_model import BaseModel
 
 
-class Connect4Model(nn.Module, GameModel):
+class Connect4Model(BaseModel):
     def __init__(
         self, board_size: tuple[int, int], action_size: int, device: torch.device
     ):
