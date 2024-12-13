@@ -1,7 +1,9 @@
 import numpy as np
 
+from .base_game import BaseGame
 
-class Connect4Game:
+
+class Connect4Game(BaseGame):
     """
     Standard Connect4 game with:
         rows: 6

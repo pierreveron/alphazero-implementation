@@ -4,8 +4,8 @@ import math
 
 import numpy as np
 
+from .base_game import BaseGame
 from .config import AlphaZeroConfig
-from .connect4_game import Connect4Game
 from .connect4_model import Connect4Model
 
 
@@ -98,9 +98,7 @@ class Node:
 
 
 class MCTS:
-    def __init__(
-        self, game: Connect4Game, model: Connect4Model, config: AlphaZeroConfig
-    ):
+    def __init__(self, game: BaseGame, model: Connect4Model, config: AlphaZeroConfig):
         self.game = game
         self.model = model
         self.config = config

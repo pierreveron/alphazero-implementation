@@ -5,8 +5,8 @@ import numpy as np
 import torch
 from torch import optim
 
+from .base_game import BaseGame
 from .config import AlphaZeroConfig
-from .connect4_game import Connect4Game
 from .connect4_model import Connect4Model
 from .monte_carlo_tree_search import MCTS
 
@@ -14,7 +14,7 @@ from .monte_carlo_tree_search import MCTS
 class Trainer:
     def __init__(
         self,
-        game: Connect4Game,
+        game: BaseGame,
         model: Connect4Model,
         device: torch.device,
         config: AlphaZeroConfig,

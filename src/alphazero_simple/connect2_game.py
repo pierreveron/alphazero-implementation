@@ -1,7 +1,9 @@
 import numpy as np
 
+from .base_game import BaseGame
 
-class Connect2Game:
+
+class Connect2Game(BaseGame):
     """
     A very, very simple game of ConnectX in which we have:
         rows: 1
