@@ -7,7 +7,7 @@ from torch import optim
 
 from .base_game import BaseGame
 from .config import AlphaZeroConfig
-from .connect4_model import Connect4Model
+from .model_protocol import GameModel
 from .monte_carlo_tree_search import MCTS
 
 
@@ -15,7 +15,7 @@ class Trainer:
     def __init__(
         self,
         game: BaseGame,
-        model: Connect4Model,
+        model: GameModel,
         device: torch.device,
         config: AlphaZeroConfig,
     ):

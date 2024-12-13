@@ -6,7 +6,7 @@ import numpy as np
 
 from .base_game import BaseGame
 from .config import AlphaZeroConfig
-from .connect4_model import Connect4Model
+from .model_protocol import GameModel
 
 
 def ucb_score(parent: Node, child: Node) -> float:
@@ -98,12 +98,12 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, game: BaseGame, model: Connect4Model, config: AlphaZeroConfig):
+    def __init__(self, game: BaseGame, model: GameModel, config: AlphaZeroConfig):
         self.game = game
         self.model = model
         self.config = config
 
-    def run(self, model: Connect4Model, state: np.ndarray, to_play: int) -> Node:
+    def run(self, model: GameModel, state: np.ndarray, to_play: int) -> Node:
         root = Node(0, to_play)
 
         # EXPAND root
