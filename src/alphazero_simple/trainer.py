@@ -1,16 +1,13 @@
 import os
 from random import shuffle
 
-import lightning as L
 import numpy as np
 import torch
-from lightning.pytorch.loggers import TensorBoardLogger
+from torch import optim
 
 from .config import AlphaZeroConfig
 from .connect4_game import Connect4Game
 from .connect4_model import Connect4Model
-from .lightning_data import AlphaZeroDataModule
-from .lightning_model import AlphaZeroLitModule
 from .monte_carlo_tree_search import MCTS
 
 
@@ -86,26 +83,65 @@ class Trainer:
             self.save_checkpoint(folder=".", filename=filename)
 
     def train(self, examples):
-        # Create Lightning components
-        lit_model = AlphaZeroLitModule(self.model)
-        data_module = AlphaZeroDataModule(examples, batch_size=self.config.batch_size)
+        optimizer = optim.Adam(self.model.parameters(), lr=5e-4)  # type: ignore[no-untyped-call]
+        pi_losses = []
+        v_losses = []
 
-        logger = TensorBoardLogger(save_dir="lightning_logs", name="alphazero_simple")
+        for epoch in range(self.config.epochs):
+            self.model.train()
+            epoch_pi_losses = []
+            epoch_v_losses = []
+            batch_idx = 0
 
-        # Create Lightning trainer
-        trainer = L.Trainer(
-            max_epochs=self.config.epochs,
-            accelerator="auto",
-            devices=1,
-            logger=logger,
-            enable_progress_bar=True,
-        )
+            while batch_idx < int(len(examples) / self.config.batch_size):
+                sample_ids = np.random.randint(
+                    len(examples), size=self.config.batch_size
+                )
+                boards, pis, vs = list(zip(*[examples[i] for i in sample_ids]))
+                boards = torch.FloatTensor(np.array(boards).astype(np.float64))
+                target_pis = torch.FloatTensor(np.array(pis))
+                target_vs = torch.FloatTensor(np.array(vs).astype(np.float64))
 
-        # Train the model
-        trainer.fit(lit_model, data_module)
+                # predict
+                boards = boards.contiguous().to(self.device)
+                target_pis = target_pis.contiguous().to(self.device)
+                target_vs = target_vs.contiguous().to(self.device)
 
-        # Update the original model with trained weights
-        self.model.load_state_dict(lit_model.model.state_dict())
+                # compute output
+                out_pi, out_v = self.model(boards)
+                l_pi = self.loss_pi(target_pis, out_pi)
+                l_v = self.loss_v(target_vs, out_v)
+                total_loss = l_pi + l_v
+
+                pi_losses.append(float(l_pi))
+                v_losses.append(float(l_v))
+                epoch_pi_losses.append(float(l_pi))
+                epoch_v_losses.append(float(l_v))
+
+                optimizer.zero_grad()
+                total_loss.backward()
+                optimizer.step()
+
+                batch_idx += 1
+
+            # Log epoch average losses
+            epoch_pi_loss = np.mean(epoch_pi_losses)
+            epoch_v_loss = np.mean(epoch_v_losses)
+
+            print()
+            print("Policy Loss", epoch_pi_loss)
+            print("Value Loss", epoch_v_loss)
+            print("Examples:")
+            print(out_pi[0].detach())
+            print(target_pis[0])
+
+    def loss_pi(self, targets: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:
+        loss = -(targets * torch.log(outputs)).sum(dim=1)
+        return loss.mean()
+
+    def loss_v(self, targets: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:
+        loss = torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
+        return loss
 
     def save_checkpoint(self, folder, filename):
         if not os.path.exists(folder):
