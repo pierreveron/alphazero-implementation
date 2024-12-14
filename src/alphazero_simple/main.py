@@ -20,7 +20,7 @@ config = AlphaZeroConfig(
     num_simulations=25,
     num_episodes=100,
     num_iters_for_train_history=20,
-    epochs=2,
+    epochs=10,
     checkpoint_path="latest.pth",
 )
 
