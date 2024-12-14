@@ -1,5 +1,6 @@
 import os
 import time
+from collections import deque
 from random import shuffle
 
 import numpy as np
@@ -28,6 +29,10 @@ class Trainer:
         self.mcts = MCTS(self.game, self.model, self.config)
         self.writer = SummaryWriter()
         self.global_step = 0
+        max_examples = (
+            self.config.num_episodes * self.config.num_iters_for_train_history
+        )
+        self.train_examples = deque(maxlen=max_examples)
 
     def execute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
         train_examples = []
@@ -75,21 +80,23 @@ class Trainer:
         for i in range(1, self.config.num_iterations + 1):
             print("{}/{}".format(i, self.config.num_iterations))
 
-            train_examples = []
-
+            iteration_examples = []
             start_time = time.time()
 
             for eps in range(self.config.num_episodes):
-                iteration_train_examples = self.execute_episode()
-                train_examples.extend(iteration_train_examples)
+                episode_examples = self.execute_episode()
+                iteration_examples.extend(episode_examples)
 
             waited_time = time.time() - start_time
             print(
                 f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds"
             )
 
-            shuffle(train_examples)
-            self.train(train_examples)
+            self.train_examples.extend(iteration_examples)
+
+            examples_to_train = list(self.train_examples)
+            shuffle(examples_to_train)
+            self.train(examples_to_train)
             filename = self.config.checkpoint_path
             self.save_checkpoint(folder=".", filename=filename)
 
