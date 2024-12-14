@@ -1,4 +1,5 @@
 import os
+import time
 from random import shuffle
 
 import numpy as np
@@ -76,9 +77,16 @@ class Trainer:
 
             train_examples = []
 
+            start_time = time.time()
+
             for eps in range(self.config.num_episodes):
                 iteration_train_examples = self.execute_episode()
                 train_examples.extend(iteration_train_examples)
+
+            waited_time = time.time() - start_time
+            print(
+                f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds"
+            )
 
             shuffle(train_examples)
             self.train(train_examples)
