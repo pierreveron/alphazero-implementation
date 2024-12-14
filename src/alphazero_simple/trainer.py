@@ -29,10 +29,7 @@ class Trainer:
         self.mcts = MCTS(self.game, self.model, self.config)
         self.writer = SummaryWriter()
         self.global_step = 0
-        max_examples = (
-            self.config.num_episodes * self.config.num_iters_for_train_history
-        )
-        self.train_examples = deque(maxlen=max_examples)
+        self.train_examples = deque(maxlen=self.config.num_iters_for_train_history)
 
     def execute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
         train_examples = []
@@ -92,11 +89,16 @@ class Trainer:
                 f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds"
             )
 
-            self.train_examples.extend(iteration_examples)
+            # Store all examples from this iteration as one entry
+            self.train_examples.append(iteration_examples)
 
-            examples_to_train = list(self.train_examples)
-            shuffle(examples_to_train)
-            self.train(examples_to_train)
+            # Flatten all stored iterations into a single list for training
+            all_examples = []
+            for iteration_examples in self.train_examples:
+                all_examples.extend(iteration_examples)
+
+            shuffle(all_examples)
+            self.train(all_examples)
             filename = self.config.checkpoint_path
             self.save_checkpoint(folder=".", filename=filename)
 
