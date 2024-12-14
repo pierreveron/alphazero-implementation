@@ -4,6 +4,7 @@ from random import shuffle
 import numpy as np
 import torch
 from torch import optim
+from torch.utils.tensorboard.writer import SummaryWriter
 
 from .base_game import BaseGame
 from .base_model import BaseModel
@@ -24,6 +25,8 @@ class Trainer:
         self.device = device
         self.config = config
         self.mcts = MCTS(self.game, self.model, self.config)
+        self.writer = SummaryWriter()
+        self.global_step = 0
 
     def execute_episode(self) -> list[tuple[np.ndarray, np.ndarray, float]]:
         train_examples = []
@@ -89,8 +92,7 @@ class Trainer:
 
         for epoch in range(self.config.epochs):
             self.model.train()
-            epoch_pi_losses = []
-            epoch_v_losses = []
+
             batch_idx = 0
 
             while batch_idx < int(len(examples) / self.config.batch_size):
@@ -115,25 +117,27 @@ class Trainer:
 
                 pi_losses.append(float(l_pi))
                 v_losses.append(float(l_v))
-                epoch_pi_losses.append(float(l_pi))
-                epoch_v_losses.append(float(l_v))
 
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
 
+                # Log exactly the same metrics as the Lightning model
+                self.writer.add_scalar(
+                    "train_loss", float(total_loss), self.global_step
+                )
+                self.writer.add_scalar("policy_loss", float(l_pi), self.global_step)
+                self.writer.add_scalar("value_loss", float(l_v), self.global_step)
+
                 batch_idx += 1
+                self.global_step += 1
 
-            # Log epoch average losses
-            epoch_pi_loss = np.mean(epoch_pi_losses)
-            epoch_v_loss = np.mean(epoch_v_losses)
-
-            print()
-            print("Policy Loss", epoch_pi_loss)
-            print("Value Loss", epoch_v_loss)
-            print("Examples:")
-            print(out_pi[0].detach())
-            print(target_pis[0])
+        print("Policy Loss", np.mean(pi_losses))
+        print("Value Loss", np.mean(v_losses))
+        print("Examples:")
+        print(out_pi[0].detach())
+        print(target_pis[0])
+        print()
 
     def loss_pi(self, targets: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:
         loss = -(targets * torch.log(outputs)).sum(dim=1)
@@ -154,3 +158,6 @@ class Trainer:
             },
             filepath,
         )
+
+    def __del__(self):
+        self.writer.close()
