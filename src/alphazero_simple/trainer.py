@@ -46,7 +46,7 @@ class Trainer:
             action_probs = action_probs / np.sum(action_probs)
             train_examples.append((canonical_board, current_player, action_probs))
 
-            action = root.select_action(temperature=0)
+            action = root.select_action(temperature=1)
             state, current_player = self.game.get_next_state(
                 state, current_player, action
             )
