@@ -21,10 +21,10 @@ model = Connect4Model(board_size, action_size, device)
 
 config = AlphaZeroConfig(
     batch_size=32,
-    num_iterations=100,
-    num_simulations=25,
+    num_iterations=200,
+    num_simulations=100,
     num_episodes=100,
-    num_iters_for_train_history=20,
+    num_iters_for_train_history=25,
     epochs=10,
     checkpoint_path="latest.pth",
 )
