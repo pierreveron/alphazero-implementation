@@ -26,7 +26,6 @@ config = AlphaZeroConfig(
     num_episodes=100,
     num_iters_for_train_history=25,
     epochs=10,
-    checkpoint_path="latest.pth",
 )
 
 trainer = Trainer(game, model, config)

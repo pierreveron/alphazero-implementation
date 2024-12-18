@@ -98,7 +98,7 @@ class Trainer:
 
             shuffle(all_examples)
             self.train(all_examples)
-            filename = self.config.checkpoint_path
+            filename = "latest.pth"
             self.save_checkpoint(folder=".", filename=filename)
 
     def train(self, examples):

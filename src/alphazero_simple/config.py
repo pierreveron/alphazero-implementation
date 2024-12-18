@@ -13,4 +13,3 @@ class AlphaZeroConfig:
         int  # Number of iterations to store for training history
     )
     epochs: int  # Number of epochs of training per iteration
-    checkpoint_path: str  # Location to save latest set of weights
