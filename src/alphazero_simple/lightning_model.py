@@ -26,28 +26,6 @@ class AlphaZeroLitModule(L.LightningModule):
         """Forward pass through the model."""
         return self.model(x)
 
-    def loss_pi(self, targets: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:
-        """
-        Calculate the policy loss using cross-entropy.
-
-        Args:
-            targets: Target policy probabilities
-            outputs: Predicted policy probabilities
-        """
-        loss = -(targets * torch.log(outputs)).sum(dim=1)
-        return loss.mean()
-
-    def loss_v(self, targets: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:
-        """
-        Calculate the value loss using MSE.
-
-        Args:
-            targets: Target values
-            outputs: Predicted values
-        """
-        loss = torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
-        return loss
-
     def training_step(
         self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> dict[str, torch.Tensor]:
