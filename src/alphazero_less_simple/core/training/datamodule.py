@@ -43,7 +43,7 @@ class DataModule(L.LightningDataModule):
         episode_generator: EpisodeGenerator,
         config: AlphaZeroConfig,
         shuffle: bool = True,
-        num_workers: int = 8,
+        num_workers: int = 7,
         save_dir: str | Path | None = None,
     ):
         super().__init__()
@@ -139,8 +139,8 @@ class DataModule(L.LightningDataModule):
             dataset,
             batch_size=self.config.batch_size,
             shuffle=self.shuffle,
-            # num_workers=self.num_workers,
-            # persistent_workers=True if self.num_workers > 0 else False,
+            num_workers=self.num_workers,
+            persistent_workers=True if self.num_workers > 0 else False,
         )
 
     def get_buffer_size(self) -> int:
