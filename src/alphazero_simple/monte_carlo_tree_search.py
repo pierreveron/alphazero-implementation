@@ -23,13 +23,14 @@ def ucb_score(parent: Node, child: Node) -> float:
 
 
 class Node:
-    def __init__(self, prior: float, to_play: int):
+    def __init__(self, prior: float, to_play: int, parent: Node | None = None):
         self.visit_count: int = 0
         self.to_play: int = to_play
         self.prior: float = prior
         self.value_sum: float = 0.0
         self.children: dict[int, Node] = {}
         self.state: np.ndarray | None = None
+        self.parent: Node | None = parent
 
     def expanded(self):
         return len(self.children) > 0
@@ -74,7 +75,7 @@ class Node:
                 best_action = action
                 best_child = child
 
-        return best_action, best_child
+        return best_action, best_child  # type: ignore[return-value]
 
     def expand(self, state: np.ndarray, to_play: int, action_probs: np.ndarray) -> None:
         """
@@ -84,7 +85,9 @@ class Node:
         self.state = state
         for a, prob in enumerate(action_probs):
             if prob != 0:
-                self.children[a] = Node(prior=prob, to_play=self.to_play * -1)
+                self.children[a] = Node(
+                    prior=prob, to_play=self.to_play * -1, parent=self
+                )
 
     def __repr__(self):
         """
@@ -114,15 +117,14 @@ class MCTS:
 
         for _ in range(self.num_simulations):
             node = root
-            search_path = [node]
 
             # SELECT
             while node.expanded():
                 action, node = node.select_child()
-                search_path.append(node)
 
-            parent = search_path[-2]
-            state = parent.state
+            parent: Node = node.parent  # type: ignore[assignment]
+            state = parent.state  # type: ignore[assignment]
+
             # Now we're at a leaf node and we would like to expand
             # Players always play from their own perspective
             next_state, _ = self.game.get_next_state(state, player=1, action=action)
@@ -140,15 +142,17 @@ class MCTS:
                 action_probs /= np.sum(action_probs)
                 node.expand(next_state, parent.to_play * -1, action_probs)
 
-            self.backpropagate(search_path, value, parent.to_play * -1)
+            self.backpropagate(node, value, parent.to_play * -1)
 
         return root
 
-    def backpropagate(self, search_path: list[Node], value: float, to_play: int):
+    def backpropagate(self, leaf_node: Node, value: float, to_play: int):
         """
         At the end of a simulation, we propagate the evaluation all the way up the tree
         to the root.
         """
-        for node in reversed(search_path):
+        node = leaf_node
+        while node is not None:
             node.value_sum += value if node.to_play == to_play else -value
             node.visit_count += 1
+            node = node.parent
