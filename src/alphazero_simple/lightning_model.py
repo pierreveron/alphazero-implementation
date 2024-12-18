@@ -76,4 +76,6 @@ class AlphaZeroLitModule(L.LightningModule):
 
     def configure_optimizers(self) -> torch.optim.Optimizer:  # type: ignore[attr-defined]
         """Configure the Adam optimizer."""
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)  # type: ignore[attr-defined]
+        return torch.optim.Adam(  # type: ignore[attr-defined]
+            self.parameters(), lr=self.learning_rate, weight_decay=1e-4
+        )
