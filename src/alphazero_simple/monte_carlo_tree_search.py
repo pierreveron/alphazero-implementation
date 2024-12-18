@@ -25,10 +25,10 @@ def ucb_score(parent: Node, child: Node) -> float:
 
 class Node:
     def __init__(self, prior: float, to_play: int):
-        self.visit_count = 0
-        self.to_play = to_play
-        self.prior = prior
-        self.value_sum = 0
+        self.visit_count: int = 0
+        self.to_play: int = to_play
+        self.prior: float = prior
+        self.value_sum: float = 0.0
         self.children: dict[int, Node] = {}
         self.state: np.ndarray | None = None
 
@@ -103,11 +103,11 @@ class MCTS:
         self.model = model
         self.config = config
 
-    def run(self, model: BaseModel, state: np.ndarray, to_play: int) -> Node:
+    def run(self, state: np.ndarray, to_play: int) -> Node:
         root = Node(0, to_play)
 
         # EXPAND root
-        action_probs, value = model.predict(state)
+        action_probs, _ = self.model.predict(state)
         valid_moves = self.game.get_valid_moves(state)
         action_probs = action_probs * valid_moves  # mask invalid moves
         action_probs /= np.sum(action_probs)
@@ -135,7 +135,7 @@ class MCTS:
             if value is None:
                 # If the game has not ended:
                 # EXPAND
-                action_probs, value = model.predict(next_state)
+                action_probs, value = self.model.predict(next_state)
                 valid_moves = self.game.get_valid_moves(next_state)
                 action_probs = action_probs * valid_moves  # mask invalid moves
                 action_probs /= np.sum(action_probs)
@@ -145,7 +145,7 @@ class MCTS:
 
         return root
 
-    def backpropagate(self, search_path: list[Node], value: np.ndarray, to_play: int):
+    def backpropagate(self, search_path: list[Node], value: float, to_play: int):
         """
         At the end of a simulation, we propagate the evaluation all the way up the tree
         to the root.
