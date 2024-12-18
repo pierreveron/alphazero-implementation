@@ -69,4 +69,4 @@ class Connect4Model(BaseModel):
         with torch.no_grad():
             pi, v = self.forward(board)
 
-        return pi.data.cpu().numpy()[0], v.data.cpu().numpy()[0]
+        return pi.data.cpu().numpy()[0], v.data.cpu().item()
