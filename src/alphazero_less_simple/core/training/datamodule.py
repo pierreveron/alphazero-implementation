@@ -96,6 +96,12 @@ class DataModule(L.LightningDataModule):
         while self.episode_generator_thread.is_alive():
             time.sleep(0.1)
 
+        waited_time = time.time() - start_time
+
+        print(
+            f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds. Buffer size: {len(self.buffer)}"
+        )
+
         self.episode_generator_thread = EpisodeGeneratorThread(
             self.episode_generator, self.buffer
         )
@@ -106,12 +112,6 @@ class DataModule(L.LightningDataModule):
 
         # # Add new episodes to the buffer
         # self.buffer.extend(new_episodes)
-
-        waited_time = time.time() - start_time
-
-        print(
-            f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds. Buffer size: {len(self.buffer)}"
-        )
 
         # Save the new episodes
         self.current_iteration += 1
