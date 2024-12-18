@@ -55,8 +55,7 @@ class DataModule(L.LightningDataModule):
         self.num_workers = num_workers
 
         self.buffer: deque[Episode] = deque(
-            # maxlen=self.config.num_iters_for_train_history * self.config.num_episodes
-            maxlen=self.config.num_episodes
+            maxlen=self.config.num_iters_for_train_history * self.config.num_episodes
         )
         # self.episode_generator_thread = EpisodeGeneratorThread(
         #     self.episode_generator, self.buffer
@@ -103,12 +102,15 @@ class DataModule(L.LightningDataModule):
         # self.episode_generator.update_inference_model(self.model)
         # self.episode_generator_thread.start()
 
-        episodes = self.episode_generator.generate_episodes()
+        new_episodes = self.episode_generator.generate_episodes()
+
+        # Add new episodes to the buffer
+        self.buffer.extend(new_episodes)
 
         waited_time = time.time() - start_time
 
         print(
-            f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds"
+            f"Got {len(new_episodes)} new episodes in {waited_time:.2f} seconds. Buffer size: {len(self.buffer)}"
         )
 
         # Save the new episodes
@@ -116,8 +118,9 @@ class DataModule(L.LightningDataModule):
         # if self.current_iteration % self.config.num_iters_for_train_history == 0:
         #     self._save_episodes()
 
+        # Use all episodes in the buffer for training
         all_samples: list[Sample] = []
-        for episode in episodes:
+        for episode in self.buffer:
             all_samples.extend(episode.samples)
 
         boards = [sample.state for sample in all_samples]
