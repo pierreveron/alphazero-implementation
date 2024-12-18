@@ -56,7 +56,7 @@ class Connect4Model(BaseModel):
         # Value head (game outcome prediction)
         value_logit = self.value_head(x)
 
-        return F.softmax(action_logits, dim=1), torch.tanh(value_logit)
+        return action_logits, value_logit
 
     def predict(self, board):
         """
@@ -67,6 +67,8 @@ class Connect4Model(BaseModel):
         board = board.view(1, self.rows, self.cols)
         self.eval()
         with torch.no_grad():
-            pi, v = self.forward(board)
+            action_logits, value_logit = self.forward(board)
+            action_probs = F.softmax(action_logits, dim=1)
+            value = torch.tanh(value_logit)
 
-        return pi.data.cpu().numpy()[0], v.data.cpu().item()
+        return action_probs.data.cpu().numpy()[0], value.data.cpu().item()

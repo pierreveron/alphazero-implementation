@@ -30,13 +30,15 @@ class Connect2Model(BaseModel):
         action_logits = self.action_head(x)
         value_logit = self.value_head(x)
 
-        return F.softmax(action_logits, dim=1), torch.tanh(value_logit)
+        return action_logits, value_logit
 
     def predict(self, board):
         board = torch.FloatTensor(board.astype(np.float32)).to(self.device)
         board = board.view(1, self.size)
         self.eval()
         with torch.no_grad():
-            pi, v = self.forward(board)
+            action_logits, value_logit = self.forward(board)
+            action_probs = F.softmax(action_logits, dim=1)
+            value = torch.tanh(value_logit)
 
-        return pi.data.cpu().numpy()[0], v.data.cpu().numpy()[0]
+        return action_probs.data.cpu().numpy()[0], value.data.cpu().item()

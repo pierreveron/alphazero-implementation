@@ -1,6 +1,7 @@
 import lightning as L
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 
 class AlphaZeroLitModule(L.LightningModule):
@@ -60,17 +61,17 @@ class AlphaZeroLitModule(L.LightningModule):
         boards, target_pis, target_vs = batch
 
         # Get model predictions
-        out_pi, out_v = self(boards)
+        action_logits, value_logit = self(boards)
 
         # Calculate losses
-        loss_pi = self.loss_pi(target_pis, out_pi)
-        loss_v = self.loss_v(target_vs, out_v)
-        total_loss = loss_pi + loss_v
+        policy_loss = F.cross_entropy(action_logits, target_pis)
+        value_loss = F.mse_loss(value_logit, target_vs)
+        total_loss = policy_loss + value_loss
 
         # Log metrics
-        self.log("train_loss_pi", loss_pi, prog_bar=True)
-        self.log("train_loss_v", loss_v, prog_bar=True)
-        self.log("train_loss", total_loss, prog_bar=True)
+        self.log("total_loss", total_loss, prog_bar=True)
+        self.log("policy_loss", policy_loss, prog_bar=True)
+        self.log("value_loss", value_loss, prog_bar=True)
 
         return {"loss": total_loss}
 
