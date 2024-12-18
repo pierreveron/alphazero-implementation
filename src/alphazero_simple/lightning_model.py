@@ -39,11 +39,11 @@ class AlphaZeroLitModule(L.LightningModule):
         boards, target_pis, target_vs = batch
 
         # Get model predictions
-        action_logits, value_logit = self(boards)
+        action_logits, value_logits = self(boards)
 
         # Calculate losses
         policy_loss = F.cross_entropy(action_logits, target_pis)
-        value_loss = F.mse_loss(value_logit, target_vs)
+        value_loss = F.mse_loss(value_logits.view(-1), target_vs)
         total_loss = policy_loss + value_loss
 
         # Log metrics
