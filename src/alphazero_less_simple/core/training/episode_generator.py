@@ -3,8 +3,8 @@ import numpy as np
 from alphazero_simple.base_game import BaseGame
 from alphazero_simple.base_model import BaseModel
 from alphazero_simple.config import AlphaZeroConfig
+from alphazero_simple.monte_carlo_tree_search import MCTS
 
-from ...monte_carlo_tree_search import MCTS
 from .episode import Episode, Sample
 
 
@@ -49,11 +49,11 @@ class EpisodeGenerator:
             action_probs = [0 for _ in range(self.game.get_action_size())]
             for k, v in root.children.items():
                 action_probs[k] = v.visit_count
-
             action_probs = action_probs / np.sum(action_probs)
+
             train_examples.append((canonical_board, current_player, action_probs))
 
-            action = root.select_action(temperature=0)
+            action = root.select_action(temperature=1)
             state, current_player = self.game.get_next_state(
                 state, current_player, action
             )
