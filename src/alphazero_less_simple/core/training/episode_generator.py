@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 from alphazero_simple.base_game import BaseGame
@@ -16,18 +18,13 @@ class EpisodeGenerator:
         game: BaseGame,
         config: AlphaZeroConfig,
     ):
-        self.mcts = MCTS(
-            model=model,
-            game=game,
-            num_simulations=config.num_simulations,
-        )
-        self.model = model
         self.game = game
         self.config = config
+        self.update_inference_model(model)
 
-    # def update_inference_model(self, model):
-    #     """Update the inference model with the latest weights from the training model"""
-    #     self.mcts.update_inference_model(model)
+    def update_inference_model(self, model):
+        """Update the inference model with the latest weights from the training model"""
+        self.model = copy.deepcopy(model)
 
     def generate_episodes(self) -> list[Episode]:
         episodes = []

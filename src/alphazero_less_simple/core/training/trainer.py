@@ -24,7 +24,7 @@ class Trainer:
         self.config = config
 
     def _get_next_run_number(self):
-        base_dir = "lightning_logs/alphazero"
+        base_dir = "lightning_logs/alphazero_less_simple"
         if not os.path.exists(base_dir):
             return 1
         existing_runs = [d for d in os.listdir(base_dir) if d.startswith("run_")]
@@ -57,13 +57,14 @@ class Trainer:
             model=self.model,
             episode_generator=episode_generator,
             config=self.config,
-            save_dir=f"lightning_logs/alphazero/{run_name}/episodes",
+            save_dir=f"lightning_logs/alphazero_less_simple/{run_name}/episodes",
         )
 
         # Create checkpoint callback
         checkpoint_callback = ModelCheckpoint(
             # filename="{epoch}-{train_loss:.2f}",
-            every_n_epochs=self.config.epochs,
+            every_n_epochs=self.config.epochs
+            * int(self.config.num_iters_for_train_history / 2),
             save_top_k=-1,  # Keep all checkpoints
         )
 
