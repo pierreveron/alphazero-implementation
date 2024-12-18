@@ -102,6 +102,7 @@ class Trainer:
             self.save_checkpoint(folder=".", filename=filename)
 
     def train(self, examples):
+        print(f"Training on {len(examples)} examples")
         optimizer = optim.Adam(self.model.parameters(), lr=5e-4)  # type: ignore[no-untyped-call]
         pi_losses = []
         v_losses = []
