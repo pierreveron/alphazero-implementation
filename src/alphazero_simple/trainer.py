@@ -26,7 +26,7 @@ class Trainer:
         self.model = model
         self.device = device
         self.config = config
-        self.mcts = MCTS(self.game, self.model, self.config)
+        self.mcts = MCTS(self.game, self.model, self.config.num_simulations)
         self.writer = SummaryWriter()
         self.global_step = 0
         self.train_examples = deque(maxlen=self.config.num_iters_for_train_history)
@@ -39,8 +39,7 @@ class Trainer:
         while True:
             canonical_board = self.game.get_canonical_board(state, current_player)
 
-            self.mcts = MCTS(self.game, self.model, self.config)
-            root = self.mcts.run(self.model, canonical_board, to_play=1)
+            root = self.mcts.run(canonical_board, to_play=1)
 
             action_probs = [0 for _ in range(self.game.get_action_size())]
             for k, v in root.children.items():

@@ -19,7 +19,7 @@ class EpisodeGenerator:
         self.mcts = MCTS(
             model=model,
             game=game,
-            config=config,
+            num_simulations=config.num_simulations,
         )
         self.model = model
         self.game = game
@@ -43,7 +43,7 @@ class EpisodeGenerator:
         while True:
             canonical_board = self.game.get_canonical_board(state, current_player)
 
-            self.mcts = MCTS(self.game, self.model, self.config)
+            self.mcts = MCTS(self.game, self.model, self.config.num_simulations)
             root = self.mcts.run(canonical_board, to_play=1)
 
             action_probs = [0 for _ in range(self.game.get_action_size())]

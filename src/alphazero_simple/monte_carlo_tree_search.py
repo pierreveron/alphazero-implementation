@@ -6,7 +6,6 @@ import numpy as np
 
 from .base_game import BaseGame
 from .base_model import BaseModel
-from .config import AlphaZeroConfig
 
 
 def ucb_score(parent: Node, child: Node) -> float:
@@ -98,10 +97,10 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, game: BaseGame, model: BaseModel, config: AlphaZeroConfig):
+    def __init__(self, game: BaseGame, model: BaseModel, num_simulations: int):
         self.game = game
         self.model = model
-        self.config = config
+        self.num_simulations = num_simulations
 
     def run(self, state: np.ndarray, to_play: int) -> Node:
         root = Node(0, to_play)
@@ -113,7 +112,7 @@ class MCTS:
         action_probs /= np.sum(action_probs)
         root.expand(state, to_play, action_probs)
 
-        for _ in range(self.config.num_simulations):
+        for _ in range(self.num_simulations):
             node = root
             search_path = [node]
 
