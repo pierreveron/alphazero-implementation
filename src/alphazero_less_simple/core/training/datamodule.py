@@ -17,15 +17,18 @@ from .episode_generator import EpisodeGenerator
 
 
 class EpisodeGeneratorThread(threading.Thread):
-    def __init__(self, generator: EpisodeGenerator, buffer: deque[Episode]):
+    def __init__(
+        self, generator: EpisodeGenerator, buffer: deque[Episode], model: BaseModel
+    ):
         super().__init__(daemon=True)
         self.generator = generator
         self.buffer = buffer
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
+        self.model = model
 
     def run(self):
-        episodes = self.generator.generate_episodes()
+        episodes = self.generator.generate_episodes(self.model)
         for episode in episodes:
             if self.stop_event.is_set():
                 break
@@ -58,7 +61,7 @@ class DataModule(L.LightningDataModule):
             maxlen=self.config.num_iters_for_train_history * self.config.num_episodes
         )
         self.episode_generator_thread = EpisodeGeneratorThread(
-            self.episode_generator, self.buffer
+            self.episode_generator, self.buffer, self.model
         )
         # Setup save directory
         self.save_every_n_iterations = self.config.num_iters_for_train_history
@@ -103,9 +106,8 @@ class DataModule(L.LightningDataModule):
         )
 
         self.episode_generator_thread = EpisodeGeneratorThread(
-            self.episode_generator, self.buffer
+            self.episode_generator, self.buffer, self.model
         )
-        self.episode_generator.update_inference_model(self.model)
         self.episode_generator_thread.start()
 
         # new_episodes = self.episode_generator.generate_episodes()

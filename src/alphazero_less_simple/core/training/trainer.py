@@ -48,7 +48,6 @@ class Trainer:
 
         episode_generator = EpisodeGenerator(
             game=self.game,
-            model=self.model,
             config=self.config,
         )
 

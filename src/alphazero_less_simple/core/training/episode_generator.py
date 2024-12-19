@@ -15,19 +15,17 @@ class EpisodeGenerator:
     def __init__(
         self,
         *,
-        model: BaseModel,
         game: BaseGame,
         config: AlphaZeroConfig,
     ):
         self.game = game
         self.config = config
-        self.update_inference_model(model)
 
-    def update_inference_model(self, model):
-        """Update the inference model with the latest weights from the training model"""
-        self.model = copy.deepcopy(model)
+    def generate_episodes(self, model: BaseModel) -> Generator[Episode, None, None]:
+        model = copy.deepcopy(model)
+        model.eval()
 
-    def generate_episodes(self) -> Generator[Episode, None, None]:
+        mcts = MCTS(self.game, model, self.config.num_simulations)
         states = [self.game.get_init_board() for _ in range(self.config.num_episodes)]
         current_players = [1] * self.config.num_episodes
         train_examples_list = [[] for _ in range(self.config.num_episodes)]
@@ -39,8 +37,7 @@ class EpisodeGenerator:
                 for state, current_player in zip(states, current_players)
             ]
 
-            self.mcts = MCTS(self.game, self.model, self.config.num_simulations)
-            roots = self.mcts.run_batch(canonical_boards, current_players)
+            roots = mcts.run_batch(canonical_boards, current_players)
 
             for root, state, current_player, canonical_board, i in zip(
                 roots,
