@@ -1,4 +1,5 @@
 import copy
+from typing import Generator
 
 import numpy as np
 
@@ -26,51 +27,68 @@ class EpisodeGenerator:
         """Update the inference model with the latest weights from the training model"""
         self.model = copy.deepcopy(model)
 
-    def generate_episodes(self) -> list[Episode]:
-        episodes = []
-        for _ in range(self.config.num_episodes):
-            episodes.append(self.execute_episode())
-        return episodes
+    def generate_episodes(self) -> Generator[Episode, None, None]:
+        states = [self.game.get_init_board() for _ in range(self.config.num_episodes)]
+        current_players = [1] * self.config.num_episodes
+        train_examples_list = [[] for _ in range(self.config.num_episodes)]
 
-    def execute_episode(self) -> Episode:
-        train_examples = []
-        current_player = 1
-        state = self.game.get_init_board()
-
+        episode_count = 0
         while True:
-            canonical_board = self.game.get_canonical_board(state, current_player)
+            canonical_boards = [
+                self.game.get_canonical_board(state, current_player)
+                for state, current_player in zip(states, current_players)
+            ]
 
             self.mcts = MCTS(self.game, self.model, self.config.num_simulations)
-            root = self.mcts.run(canonical_board, to_play=1)
+            roots = self.mcts.run_batch(canonical_boards, current_players)
 
-            action_probs = [0 for _ in range(self.game.get_action_size())]
-            for k, v in root.children.items():
-                action_probs[k] = v.visit_count
-            action_probs = action_probs / np.sum(action_probs)
+            for root, state, current_player, canonical_board, i in zip(
+                roots,
+                states,
+                current_players,
+                canonical_boards,
+                range(self.config.num_episodes),
+            ):
+                action_probs = [0 for _ in range(self.game.get_action_size())]
+                for k, v in root.children.items():
+                    action_probs[k] = v.visit_count
+                action_probs = action_probs / np.sum(action_probs)
 
-            train_examples.append((canonical_board, current_player, action_probs))
+                train_examples_list[i].append(
+                    (canonical_board, current_player, action_probs)
+                )
 
-            action = root.select_action(temperature=1)
-            state, current_player = self.game.get_next_state(
-                state, current_player, action
-            )
-            reward = self.game.get_reward_for_player(state, current_player)
+                action = root.select_action(temperature=1)
+                state, current_player = self.game.get_next_state(  # noqa: PLW2901
+                    state, current_player, action
+                )
+                states[i], current_players[i] = state, current_player
+                reward = self.game.get_reward_for_player(state, current_player)
 
-            if reward is not None:
-                episode = Episode()
-                for (
-                    hist_state,
-                    hist_current_player,
-                    hist_action_probs,
-                ) in train_examples:
-                    # [Board, currentPlayer, actionProbabilities, Reward]
-                    episode.add_sample(
-                        Sample(
-                            state=hist_state,
-                            policy=hist_action_probs,
-                            value=reward
-                            * ((-1) ** (hist_current_player != current_player)),
+                if reward is not None:
+                    episode = Episode()
+                    for (
+                        hist_state,
+                        hist_current_player,
+                        hist_action_probs,
+                    ) in train_examples_list[i]:
+                        # [Board, currentPlayer, actionProbabilities, Reward]
+                        episode.add_sample(
+                            Sample(
+                                state=hist_state,
+                                policy=hist_action_probs,
+                                value=reward
+                                * ((-1) ** (hist_current_player != current_player)),
+                            )
                         )
-                    )
 
-                return episode
+                    yield episode
+
+                    states[i] = self.game.get_init_board()
+                    current_players[i] = 1
+                    train_examples_list[i] = []
+
+                    episode_count += 1
+
+                    if episode_count >= self.config.num_episodes:
+                        return
