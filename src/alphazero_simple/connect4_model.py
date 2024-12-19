@@ -58,17 +58,26 @@ class Connect4Model(BaseModel):
 
         return action_logits, value_logit
 
-    def predict(self, board):
+    def predict(self, boards: list[np.ndarray]) -> tuple[list[np.ndarray], list[float]]:
         """
-        Input: board in the form of numpy array
-        Returns: probability distribution over actions and value estimate
+        Input: list of boards as numpy arrays of shape (rows, cols)
+        Returns: probability distributions over actions and value estimates
         """
-        board = torch.FloatTensor(board.astype(np.float32)).to(self.device)
-        board = board.view(1, self.rows, self.cols)
+        # Convert list of boards to tensor
+        boards_tensor = torch.FloatTensor(np.array(boards)).to(self.device)
+        if boards_tensor.dim() == 2:  # Single board
+            boards_tensor = boards_tensor.view(1, self.rows, self.cols)
+        elif boards_tensor.dim() == 3:  # Batch of boards
+            boards_tensor = boards_tensor.view(-1, self.rows, self.cols)
+
         self.eval()
         with torch.no_grad():
-            action_logits, value_logit = self.forward(board)
+            action_logits, value_logit = self.forward(boards_tensor)
             action_probs = F.softmax(action_logits, dim=1)
             value = torch.tanh(value_logit)
 
-        return action_probs.data.cpu().numpy()[0], value.data.cpu().item()
+        # Convert to list of numpy arrays
+        action_probs_list = list(action_probs.cpu().numpy())
+        value_list = list(value.cpu().numpy().flatten())
+
+        return action_probs_list, value_list
