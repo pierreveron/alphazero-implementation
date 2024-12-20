@@ -16,22 +16,35 @@ class Connect4Model(BaseModel):
         self.rows, self.cols = board_size
         self.action_size = action_size
 
-        # Input channels = 1 (just the board state)
-        # Output channels = 32 (number of filters)
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        # Define channel sizes
+        self.channels = [1, 64, 128, 256]  # Starting with 1 channel for Connect4
 
-        # Calculate the size of the flattened features
-        # After 3 conv layers with padding, spatial dimensions remain the same
-        self.flat_size = 64 * self.rows * self.cols
+        # CNN layers with BatchNorm
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(self.channels[0], self.channels[1], kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.channels[1]),
+            nn.ReLU(),
+            nn.Conv2d(self.channels[1], self.channels[2], kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.channels[2]),
+            nn.ReLU(),
+            nn.Conv2d(self.channels[2], self.channels[3], kernel_size=3, padding=1),
+            nn.BatchNorm2d(self.channels[3]),
+            nn.ReLU(),
+        )
 
-        # Fully connected layers
-        self.fc1 = nn.Linear(self.flat_size, 128)
+        # Calculate flattened size
+        self.flat_size = self.channels[-1] * self.rows * self.cols
 
-        # Two heads: policy (actions) and value
-        self.action_head = nn.Linear(128, self.action_size)
-        self.value_head = nn.Linear(128, 1)
+        # Shared layers with dropout
+        self.shared_layers = nn.Sequential(
+            nn.Linear(self.flat_size, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+        )
+
+        # Policy and value heads
+        self.action_head = nn.Linear(512, self.action_size)
+        self.value_head = nn.Linear(512, 1)
 
         self.to(device)
 
@@ -39,16 +52,14 @@ class Connect4Model(BaseModel):
         # Add channel dimension and convert to float
         x = x.view(-1, 1, self.rows, self.cols)
 
-        # Convolutional layers with ReLU activation
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
+        # Convolutional layers
+        x = self.conv_layers(x)
 
         # Flatten
         x = x.view(-1, self.flat_size)
 
-        # Fully connected layer
-        x = F.relu(self.fc1(x))
+        # Shared layers
+        x = self.shared_layers(x)
 
         # Policy head (action probabilities)
         action_logits = self.action_head(x)
