@@ -70,7 +70,7 @@ class Trainer:
         # Create trainer with checkpoint callback
         trainer = L.Trainer(
             max_epochs=self.config.num_iterations * self.config.epochs,
-            log_every_n_steps=1,
+            log_every_n_steps=50,
             enable_progress_bar=True,
             logger=logger,
             reload_dataloaders_every_n_epochs=self.config.epochs,
