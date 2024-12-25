@@ -6,7 +6,7 @@ from alphazero_simple.connect4_game import Connect4Game
 from alphazero_simple.connect4_model import Connect4Model
 
 
-def main():
+def main(config: AlphaZeroConfig):
     game = Connect4Game()
     board_size = game.get_board_size()
     action_size = game.get_action_size()
@@ -21,6 +21,11 @@ def main():
 
     model = Connect4Model(board_size, action_size, device)
 
+    trainer = Trainer(game, model, config)
+    trainer.learn()
+
+
+if __name__ == "__main__":
     config = AlphaZeroConfig(
         batch_size=32,
         num_iterations=200,
@@ -29,10 +34,4 @@ def main():
         num_iters_for_train_history=25,
         epochs=10,
     )
-
-    trainer = Trainer(game, model, config)
-    trainer.learn()
-
-
-if __name__ == "__main__":
-    main()
+    main(config)
