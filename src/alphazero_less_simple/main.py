@@ -23,5 +23,6 @@ if __name__ == "__main__":
         num_episodes=100,
         num_iters_for_train_history=25,
         epochs=10,
+        background_generation=False,
     )
     main(config)

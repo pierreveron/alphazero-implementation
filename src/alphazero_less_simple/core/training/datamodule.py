@@ -28,11 +28,13 @@ class EpisodeGeneratorThread(threading.Thread):
 
     def run(self):
         episodes = self.generator.generate_episodes(self.model)
+        start_time = time.time()
         for episode in episodes:
             if self.stop_event.is_set():
                 break
             with self.lock:
                 self.buffer.append(episode)
+        print(f"Generated new episodes in {time.time() - start_time:.2f} seconds")
 
     def stop(self):
         self.stop_event.set()
@@ -59,9 +61,13 @@ class DataModule(L.LightningDataModule):
         self.buffer: deque[Episode] = deque(
             maxlen=self.config.num_iters_for_train_history * self.config.num_episodes
         )
-        self.episode_generator_thread = EpisodeGeneratorThread(
-            self.episode_generator, self.buffer, self.model
+
+        self.episode_generator_thread = (
+            EpisodeGeneratorThread(self.episode_generator, self.buffer, self.model)
+            if config.background_generation
+            else None
         )
+
         # Setup save directory
         self.save_every_n_iterations = self.config.num_iters_for_train_history
         self.save_dir = Path(save_dir) if save_dir else Path("episodes")
@@ -69,7 +75,7 @@ class DataModule(L.LightningDataModule):
         self.current_iteration = 0
 
     def setup(self, stage: str):
-        if stage == "fit":
+        if stage == "fit" and self.episode_generator_thread:
             self.episode_generator_thread.start()
 
     def _save_episodes(self):
@@ -95,24 +101,23 @@ class DataModule(L.LightningDataModule):
     ) -> DataLoader[tuple[torch.Tensor, ...]]:
         # Wait until we have new episodes
         start_time = time.time()
-        while self.episode_generator_thread.is_alive():
-            time.sleep(0.1)
+
+        if self.episode_generator_thread:
+            while self.episode_generator_thread.is_alive():
+                time.sleep(0.1)
+            self.episode_generator_thread = EpisodeGeneratorThread(
+                self.episode_generator, self.buffer, self.model
+            )
+            self.episode_generator_thread.start()
+        else:
+            new_episodes = self.episode_generator.generate_episodes(self.model)
+            self.buffer.extend(new_episodes)
 
         waited_time = time.time() - start_time
 
         print(
-            f"Got {self.config.num_episodes} new episodes in {waited_time:.2f} seconds. Buffer size: {len(self.buffer)}"
+            f"Waited {waited_time:.2f} seconds for {self.config.num_episodes} new episodes. Buffer size: {len(self.buffer)}"
         )
-
-        self.episode_generator_thread = EpisodeGeneratorThread(
-            self.episode_generator, self.buffer, self.model
-        )
-        self.episode_generator_thread.start()
-
-        # new_episodes = self.episode_generator.generate_episodes()
-
-        # # Add new episodes to the buffer
-        # self.buffer.extend(new_episodes)
 
         # Save the new episodes
         self.current_iteration += 1
@@ -142,6 +147,6 @@ class DataModule(L.LightningDataModule):
         return len(self.buffer)
 
     def teardown(self, stage: str):
-        if stage == "fit":
+        if stage == "fit" and self.episode_generator_thread:
             self.episode_generator_thread.stop()
             self.episode_generator_thread.join()
