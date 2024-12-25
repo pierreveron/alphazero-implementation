@@ -123,7 +123,7 @@ class ResNet(BaseModel):
         inputs = np.stack([empty_squares, current_player, opponent], axis=1)
 
         # Convert to tensor and move to device in one operation
-        return torch.from_numpy(inputs).to(self.device)
+        return torch.from_numpy(inputs)
 
     def predict(self, boards: list[np.ndarray]) -> tuple[list[np.ndarray], list[float]]:
         """
@@ -131,7 +131,7 @@ class ResNet(BaseModel):
         Returns: probability distributions over actions and value estimates
         """
         # Convert list of boards to tensor
-        boards_tensor = self._states_to_tensor(boards)
+        boards_tensor = self._states_to_tensor(boards).to(self.device)
 
         self.eval()
         with torch.no_grad():
