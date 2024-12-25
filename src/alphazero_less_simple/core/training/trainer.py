@@ -7,7 +7,6 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from alphazero_simple.base_game import BaseGame
 from alphazero_simple.base_model import BaseModel
 from alphazero_simple.config import AlphaZeroConfig
-from alphazero_simple.lightning_model import AlphaZeroLitModule
 
 from . import DataModule, EpisodeGenerator
 
@@ -77,9 +76,7 @@ class Trainer:
             callbacks=[checkpoint_callback],
         )
 
-        lit_model = AlphaZeroLitModule(self.model)
-
         # Train the model
-        trainer.fit(lit_model, datamodule=datamodule)
+        trainer.fit(self.model, datamodule=datamodule)
 
         print("Training completed!")

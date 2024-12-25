@@ -1,9 +1,7 @@
-import torch
-
 from alphazero_less_simple.core.training import Trainer
 from alphazero_simple.config import AlphaZeroConfig
 from alphazero_simple.connect4_game import Connect4Game
-from alphazero_simple.connect4_model import Connect4Model
+from alphazero_simple.resnet import ResNet
 
 
 def main(config: AlphaZeroConfig):
@@ -11,15 +9,7 @@ def main(config: AlphaZeroConfig):
     board_size = game.get_board_size()
     action_size = game.get_action_size()
 
-    device = torch.device(
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
-
-    model = Connect4Model(board_size, action_size, device)
+    model = ResNet(board_size, action_size, 9, 128)
 
     trainer = Trainer(game, model, config)
     trainer.learn()

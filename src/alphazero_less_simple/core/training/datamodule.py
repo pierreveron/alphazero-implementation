@@ -5,9 +5,8 @@ from collections import deque
 from pathlib import Path
 
 import lightning as L
-import numpy as np
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 from alphazero_simple.base_model import BaseModel
 from alphazero_simple.config import AlphaZeroConfig
@@ -129,13 +128,7 @@ class DataModule(L.LightningDataModule):
         policies = [sample.policy for sample in all_samples]
         values = [sample.value for sample in all_samples]
 
-        boards = torch.FloatTensor(np.array(boards).astype(np.float64))
-        target_pis = torch.FloatTensor(np.array(policies))
-        target_vs = torch.FloatTensor(np.array(values).astype(np.float64))
-
-        dataset = TensorDataset(boards, target_pis, target_vs)
-
-        # dataset = self.model.format_dataset(states, policies, values)
+        dataset = self.model.format_dataset(boards, policies, values)
 
         return DataLoader(
             dataset,

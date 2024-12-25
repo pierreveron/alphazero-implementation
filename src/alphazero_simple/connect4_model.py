@@ -8,11 +8,12 @@ from .base_model import BaseModel
 
 class Connect4Model(BaseModel):
     def __init__(
-        self, board_size: tuple[int, int], action_size: int, device: torch.device
+        self,
+        board_size: tuple[int, int],
+        action_size: int,
     ):
         super(Connect4Model, self).__init__()  # type: ignore[no-untyped-call]
 
-        self.device = device
         self.rows, self.cols = board_size
         self.action_size = action_size
 
@@ -46,8 +47,6 @@ class Connect4Model(BaseModel):
         self.action_head = nn.Linear(512, self.action_size)
         self.value_head = nn.Linear(512, 1)
 
-        self.to(device)
-
     def forward(self, x):
         # Add channel dimension and convert to float
         x = x.view(-1, 1, self.rows, self.cols)
@@ -67,7 +66,7 @@ class Connect4Model(BaseModel):
         # Value head (game outcome prediction)
         value_logit = self.value_head(x)
 
-        return action_logits, value_logit
+        return action_logits, value_logit.view(-1)
 
     def predict(self, boards: list[np.ndarray]) -> tuple[list[np.ndarray], list[float]]:
         """

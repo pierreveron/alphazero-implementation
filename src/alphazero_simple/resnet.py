@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -30,11 +32,9 @@ class ResNet(BaseModel):
         action_size: int,
         num_res_blocks: int,
         num_channels: int,
-        device: torch.device,
     ):
         super(ResNet, self).__init__()  # type: ignore[no-untyped-call]
 
-        self.device = device
         self.rows, self.cols = board_size
         self.action_size = action_size
 
@@ -81,11 +81,7 @@ class ResNet(BaseModel):
         #     nn.Linear(256, 1),
         # )
 
-        self.to(device)
-
     def forward(self, x):
-        x = x.view(-1, 1, self.rows, self.cols)
-
         x = self.input_conv(x)
 
         for block in self.residual_blocks:
@@ -94,7 +90,40 @@ class ResNet(BaseModel):
         action_logits = self.policy_head(x)
         value_logit = self.value_head(x)
 
-        return action_logits, value_logit
+        # return action_logits, value_logit
+        return action_logits, value_logit.view(-1)
+
+    # def _states_to_tensor(self, boards: list[np.ndarray]) -> Tensor:
+    #     batch_size = len(boards)
+    #     inputs = torch.zeros((batch_size, 3, self.rows, self.cols))
+
+    #     for i, board in enumerate(boards):
+    #         # Create the three channels
+    #         empty_squares = (board == 0).astype(np.float32)
+    #         current_player = (board == 1).astype(np.float32)
+    #         opponent = (board == -1).astype(np.float32)
+
+    #         # Stack the channels for this board
+    #         inputs[i] = torch.FloatTensor(
+    #             np.stack([empty_squares, current_player, opponent])
+    #         )
+
+    #     return inputs.to(self.device)
+
+    def _states_to_tensor(self, boards: list[np.ndarray]) -> torch.Tensor:
+        # Stack boards into a single array
+        boards_array = np.stack(boards)
+
+        # Create all channels at once using broadcasting
+        empty_squares = (boards_array == 0).astype(np.float32)
+        current_player = (boards_array == 1).astype(np.float32)
+        opponent = (boards_array == -1).astype(np.float32)
+
+        # Stack all channels at once
+        inputs = np.stack([empty_squares, current_player, opponent], axis=1)
+
+        # Convert to tensor and move to device in one operation
+        return torch.from_numpy(inputs).to(self.device)
 
     def predict(self, boards: list[np.ndarray]) -> tuple[list[np.ndarray], list[float]]:
         """
@@ -102,11 +131,7 @@ class ResNet(BaseModel):
         Returns: probability distributions over actions and value estimates
         """
         # Convert list of boards to tensor
-        boards_tensor = torch.FloatTensor(np.array(boards)).to(self.device)
-        if boards_tensor.dim() == 2:  # Single board
-            boards_tensor = boards_tensor.view(1, self.rows, self.cols)
-        elif boards_tensor.dim() == 3:  # Batch of boards
-            boards_tensor = boards_tensor.view(-1, self.rows, self.cols)
+        boards_tensor = self._states_to_tensor(boards)
 
         self.eval()
         with torch.no_grad():
