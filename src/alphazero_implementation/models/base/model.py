@@ -28,20 +28,18 @@ class Model(ABC, L.LightningModule):
         self, batch: tuple[Tensor, Tensor, Tensor], batch_idx: int
     ) -> Tensor:
         x, policy_target, value_target = batch
-        policy_logits, value = self(x)
 
-        # Calculate policy loss (cross-entropy)
+        # Get model predictions
+        policy_logits, value_logits = self(x)
+
+        # Calculate losses
         policy_loss = F.cross_entropy(policy_logits, policy_target)
-
-        # Calculate value loss (mean squared error)
-        value_loss = F.mse_loss(value, value_target)
-
-        # Combine losses (you can adjust the weighting if needed)
+        value_loss = F.mse_loss(value_logits, value_target)
         total_loss = policy_loss + value_loss
 
-        self.log("train_loss", total_loss)  # type: ignore[arg-type]
-        self.log("policy_loss", policy_loss)  # type: ignore[arg-type]
-        self.log("value_loss", value_loss)  # type: ignore[arg-type]
+        self.log("train_loss", total_loss)
+        self.log("policy_loss", policy_loss)
+        self.log("value_loss", value_loss)
 
         return total_loss
 
