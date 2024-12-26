@@ -1,3 +1,4 @@
+import copy
 import json
 import threading
 import time
@@ -27,7 +28,12 @@ class EpisodeGeneratorThread(threading.Thread):
         self.model = model
 
     def run(self):
-        episodes = self.generator.generate_episodes(self.model)
+        device = self.model.device
+        model = copy.deepcopy(self.model)
+        model.to(device)
+        model.eval()
+
+        episodes = self.generator.generate_episodes(model)
         start_time = time.time()
         for episode in episodes:
             if self.stop_event.is_set():

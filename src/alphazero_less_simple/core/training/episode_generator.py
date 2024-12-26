@@ -1,4 +1,3 @@
-import copy
 from typing import Generator
 
 import numpy as np
@@ -22,9 +21,6 @@ class EpisodeGenerator:
         self.config = config
 
     def generate_episodes(self, model: BaseModel) -> Generator[Episode, None, None]:
-        model = copy.deepcopy(model)
-        model.eval()
-
         mcts = MCTS(self.game, model, self.config.num_simulations)
         states = [self.game.get_init_board() for _ in range(self.config.num_episodes)]
         current_players = [1] * self.config.num_episodes
