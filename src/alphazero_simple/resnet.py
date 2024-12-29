@@ -5,6 +5,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from alphazero_simple.connect4_game import Connect4Game
+
 from .base_model import BaseModel
 
 
@@ -81,7 +83,7 @@ class ResNet(BaseModel):
         #     nn.Linear(256, 1),
         # )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         x = self.input_conv(x)
 
         for block in self.residual_blocks:
@@ -130,12 +132,21 @@ class ResNet(BaseModel):
         Input: list of boards as numpy arrays of shape (rows, cols)
         Returns: probability distributions over actions and value estimates
         """
+        game = Connect4Game()
         # Convert list of boards to tensor
         boards_tensor = self._states_to_tensor(boards).to(self.device)
 
         self.eval()
         with torch.no_grad():
             action_logits, value_logit = self.forward(boards_tensor)
+
+            # Get valid moves for each board and mask invalid moves
+            valid_moves = torch.tensor(
+                [game.get_valid_moves(board) for board in boards], device=self.device
+            )
+            action_logits = action_logits.masked_fill(valid_moves == 0, float("-inf"))
+
+            # Apply softmax only on valid moves
             action_probs = F.softmax(action_logits, dim=1)
             value = torch.tanh(value_logit)
 
