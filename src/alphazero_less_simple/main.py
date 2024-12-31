@@ -17,10 +17,10 @@ def main(config: AlphaZeroConfig):
 
 if __name__ == "__main__":
     config = AlphaZeroConfig(
-        batch_size=32,
-        num_iterations=200,
-        num_simulations=100,
-        num_episodes=100,
+        batch_size=64,
+        num_iterations=20,
+        num_simulations=600,
+        num_episodes=5000,
         num_iters_for_train_history=25,
         epochs=10,
         background_generation=False,

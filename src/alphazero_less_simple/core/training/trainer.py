@@ -61,18 +61,16 @@ class Trainer:
         # Create checkpoint callback
         checkpoint_callback = ModelCheckpoint(
             # filename="{epoch}-{train_loss:.2f}",
-            every_n_epochs=self.config.epochs
-            * int(self.config.num_iters_for_train_history / 2),
+            every_n_epochs=self.config.epochs,
             save_top_k=-1,  # Keep all checkpoints
         )
 
         # Create trainer with checkpoint callback
         trainer = L.Trainer(
-            max_epochs=self.config.num_iterations * self.config.epochs,
+            max_epochs=-1,
             log_every_n_steps=50,
             enable_progress_bar=True,
             logger=logger,
-            reload_dataloaders_every_n_epochs=self.config.epochs,
             callbacks=[checkpoint_callback],
         )
 
