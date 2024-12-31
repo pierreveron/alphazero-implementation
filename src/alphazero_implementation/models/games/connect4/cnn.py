@@ -6,8 +6,8 @@ from .model import Connect4Model
 
 
 class CNNModel(Connect4Model):
-    def __init__(self, height: int, width: int, max_actions: int, num_players: int):
-        super().__init__(height, width, max_actions, num_players)
+    def __init__(self):
+        super().__init__()
 
         # Parameters for CNN layers
         self.channels = [
@@ -31,7 +31,7 @@ class CNNModel(Connect4Model):
         )
 
         # Calculate size after CNN layers
-        self.conv_output_size = self.channels[-1] * height * width
+        self.conv_output_size = self.channels[-1] * self.board_height * self.board_width
 
         # Fully connected layers
         self.shared_layers = nn.Sequential(
@@ -41,10 +41,13 @@ class CNNModel(Connect4Model):
         )
 
         # Policy head
-        self.policy_head = nn.Linear(512, max_actions)
+        self.policy_head = nn.Linear(512, self.board_width)
 
         # Value head
-        self.value_head = nn.Sequential(nn.Linear(512, num_players), nn.Tanh())
+        self.value_head = nn.Sequential(
+            nn.Linear(512, 1),
+            nn.Tanh(),
+        )
 
         self.learning_rate = 1e-3
 
@@ -64,6 +67,10 @@ class CNNModel(Connect4Model):
         # Output heads
         policy_logits = self.policy_head(shared_output)
         value = self.value_head(shared_output)
+
+        # Concatenate value and its negative along dim=1
+        # Result shape: [batch_size, 2]
+        value = torch.cat([value, -value], dim=1)
 
         return policy_logits, value
 

@@ -2,17 +2,16 @@ import copy
 from abc import ABC, abstractmethod
 
 import lightning as L
+import numpy as np
 import torch
 import torch.nn.functional as F
-from simulator.game.connect import State  # type: ignore[import]
+from numpy.typing import NDArray
 from torch import Tensor
 from torch.optim import Adam  # type: ignore[import]
 from torch.utils.data import TensorDataset
 
-from .prediction_types import ActionPolicy, Value
 
-
-class Model(ABC, L.LightningModule):
+class BaseModel(ABC, L.LightningModule):
     """
     An abstract class for a model that can be used in the MCTS simulation.
     """
@@ -30,7 +29,7 @@ class Model(ABC, L.LightningModule):
         x, policy_target, value_target = batch
 
         # Get model predictions
-        policy_logits, value_logits = self(x)
+        policy_logits, value_logits = self.forward(x)
 
         # Calculate losses
         policy_loss = F.cross_entropy(policy_logits, policy_target)
@@ -52,42 +51,28 @@ class Model(ABC, L.LightningModule):
         pass
 
     @abstractmethod
-    def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
+    # def predict(self, states: list[State]) -> tuple[list[ActionPolicy], list[Value]]:
+    def predict(self, boards: list[NDArray]) -> tuple[list[NDArray], list[float]]:
         """
-        Predict action probabilities and state values for a list of game states.
-
-        This method takes a list of game states and returns two lists:
-        1. A list of action policies: Each policy is a dictionary mapping legal actions to their probabilities.
-        2. A list of state values: Each value is an array representing the estimated value of the state for each player.
-
-        The action policies provide probability distributions over possible moves for each state,
-        while the state values estimate the expected outcomes of the game from each state for each player.
-
-        Args:
-            states (list[State]): A list of game states to evaluate.
-
-        Returns:
-            tuple[list[ActionPolicy], list[Value]]: A tuple containing:
-                - list[ActionPolicy]: A list of dictionaries, each mapping legal actions to their probabilities.
-                - list[Value]: A list of arrays, each representing the estimated value of a state for each player.
+        Base prediction method that should be implemented by subclasses
         """
         pass
 
     def format_dataset(
-        self, states: list[State], policies: list[ActionPolicy], values: list[Value]
+        self, states: list[NDArray], policies: list[NDArray], values: list[float]
     ) -> TensorDataset:
         state_inputs = self._states_to_tensor(states)
-        policy_targets = self._policies_to_tensor(policies)
-        value_targets = torch.FloatTensor(values)
+        policy_targets = torch.FloatTensor(np.array(policies))
+        value_targets = torch.FloatTensor(np.array(values).astype(np.float64))
         return TensorDataset(state_inputs, policy_targets, value_targets)
 
     @abstractmethod
-    def _states_to_tensor(self, states: list[State]) -> Tensor:
+    def _states_to_tensor(self, boards: list[np.ndarray]) -> Tensor:
         pass
 
-    @abstractmethod
-    def _policies_to_tensor(self, policies: list[ActionPolicy]) -> Tensor:
-        pass
+    # @abstractmethod
+    # def _policies_to_tensor(self, policies: list[NDArray]) -> Tensor:
+    #     pass
 
     def get_inference_clone(self):
         """Create a clone of the model for inference"""
