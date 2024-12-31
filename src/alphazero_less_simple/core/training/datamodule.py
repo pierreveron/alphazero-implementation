@@ -18,7 +18,7 @@ from .episode_generator import EpisodeGenerator
 
 class EpisodeGeneratorThread(threading.Thread):
     def __init__(
-        self, generator: EpisodeGenerator, buffer: deque[Episode], model: BaseModel
+        self, generator: EpisodeGenerator, buffer: deque[Sample], model: BaseModel
     ):
         super().__init__(daemon=True)
         self.generator = generator
@@ -39,7 +39,7 @@ class EpisodeGeneratorThread(threading.Thread):
             if self.stop_event.is_set():
                 break
             with self.lock:
-                self.buffer.append(episode)
+                self.buffer.extend(episode.samples)
         print(f"Generated new episodes in {time.time() - start_time:.2f} seconds")
 
     def stop(self):
@@ -64,9 +64,7 @@ class DataModule(L.LightningDataModule):
         self.shuffle = shuffle
         self.num_workers = num_workers
 
-        self.buffer: deque[Episode] = deque(
-            maxlen=self.config.num_iters_for_train_history * self.config.num_episodes
-        )
+        self.buffer: deque[Sample] = deque(maxlen=self.config.mem_buffer_size)
 
         self.episode_generator_thread = (
             EpisodeGeneratorThread(self.episode_generator, self.buffer, self.model)
@@ -117,7 +115,9 @@ class DataModule(L.LightningDataModule):
             self.episode_generator_thread.start()
         else:
             new_episodes = self.episode_generator.generate_episodes(self.model)
-            self.buffer.extend(new_episodes)
+            self.buffer.extend(
+                [sample for episode in new_episodes for sample in episode.samples]
+            )
 
         waited_time = time.time() - start_time
 
@@ -131,9 +131,7 @@ class DataModule(L.LightningDataModule):
             self._save_episodes()
 
         # Use all episodes in the buffer for training
-        all_samples: list[Sample] = []
-        for episode in self.buffer:
-            all_samples.extend(episode.samples)
+        all_samples: list[Sample] = list(self.buffer)
 
         boards = [sample.state for sample in all_samples]
         policies = [sample.policy for sample in all_samples]

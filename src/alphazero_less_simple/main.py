@@ -21,8 +21,9 @@ if __name__ == "__main__":
         num_iterations=20,
         num_simulations=600,
         num_episodes=5000,
-        num_iters_for_train_history=25,
+        num_iters_for_train_history=1,
         epochs=10,
+        mem_buffer_size=int(5e5),
         background_generation=False,
     )
     main(config)

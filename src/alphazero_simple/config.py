@@ -13,6 +13,7 @@ class AlphaZeroConfig:
         int  # Number of iterations to store for training history
     )
     epochs: int  # Number of epochs of training per iteration
+    mem_buffer_size: int
     background_generation: bool = (
         False  # Whether to generate episodes in the background
     )
