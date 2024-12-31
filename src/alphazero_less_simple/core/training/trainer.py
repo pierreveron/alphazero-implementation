@@ -71,6 +71,7 @@ class Trainer:
             log_every_n_steps=50,
             enable_progress_bar=True,
             logger=logger,
+            reload_dataloaders_every_n_epochs=1,
             callbacks=[checkpoint_callback],
         )
 
