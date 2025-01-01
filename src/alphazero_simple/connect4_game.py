@@ -15,6 +15,28 @@ class Connect4Game(BaseGame):
         self.rows = 6
         self.columns = 7
         self.win_length = 4
+        # Pre-compute all possible win pattern directions
+        self.directions = [
+            (0, 1),  # horizontal
+            (1, 0),  # vertical
+            (1, 1),  # diagonal positive
+            (1, -1),  # diagonal negative
+        ]
+        # Create convolution kernels for each direction
+        self._init_win_kernels()
+
+    def _init_win_kernels(self):
+        """Initialize convolution kernels for win checking"""
+        self.win_kernels = []
+        for dr, dc in self.directions:
+            kernel = np.zeros(
+                (self.win_length * abs(dr) or 1, self.win_length * abs(dc) or 1)
+            )
+            for i in range(self.win_length):
+                r = i * dr if dr else 0
+                c = i * dc if dc else 0
+                kernel[r, c] = 1
+            self.win_kernels.append(kernel)
 
     def get_init_board(self) -> np.ndarray:
         return np.zeros((self.rows, self.columns), dtype=int)
@@ -56,46 +78,30 @@ class Connect4Game(BaseGame):
         return valid_moves
 
     def is_win(self, board: np.ndarray, player: int) -> bool:
-        """Checks for 4 in a row horizontally, vertically, or diagonally"""
-        # Horizontal check
-        for row in range(self.rows):
-            for col in range(self.columns - self.win_length + 1):
-                if all(board[row][col + i] == player for i in range(self.win_length)):
-                    return True
+        """Checks for 4 in a row using convolution"""
+        # Create player-specific board
+        player_board = (board == player).astype(np.int8)
 
-        # Vertical check
-        for row in range(self.rows - self.win_length + 1):
-            for col in range(self.columns):
-                if all(board[row + i][col] == player for i in range(self.win_length)):
-                    return True
-
-        # Diagonal check (positive slope)
-        for row in range(self.rows - self.win_length + 1):
-            for col in range(self.columns - self.win_length + 1):
-                if all(
-                    board[row + i][col + i] == player for i in range(self.win_length)
-                ):
-                    return True
-
-        # Diagonal check (negative slope)
-        for row in range(self.win_length - 1, self.rows):
-            for col in range(self.columns - self.win_length + 1):
-                if all(
-                    board[row - i][col + i] == player for i in range(self.win_length)
-                ):
-                    return True
-
+        # Check each direction using convolution
+        for kernel in self.win_kernels:
+            # Convolve the board with the kernel
+            conv = np.correlate(player_board.ravel(), kernel.ravel(), mode="valid")
+            if (conv >= self.win_length).any():
+                return True
         return False
 
     def get_reward_for_player(self, board: np.ndarray, player: int) -> float | None:
         """Returns: None if game not ended, 1 if player won, -1 if player lost, 0 if draw"""
+        # Check current player first (most common case)
         if self.is_win(board, player):
-            return 1
+            return 1.0
+        # Only check opponent if current player hasn't won
         if self.is_win(board, -player):
-            return -1
+            return -1.0
+        # Only check for moves if no one has won
         if self.has_legal_moves(board):
             return None
-        return 0
+        return 0.0
 
     def get_canonical_board(self, board: np.ndarray, player: int) -> np.ndarray:
         return player * board
