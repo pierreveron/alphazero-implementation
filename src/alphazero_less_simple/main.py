@@ -52,4 +52,4 @@ if __name__ == "__main__":
     if args.profile:
         profile_train(config)
     else:
-    main(config)
+        main(config)
