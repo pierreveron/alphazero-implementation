@@ -1,3 +1,7 @@
+import argparse
+import cProfile
+import pstats
+
 from alphazero_less_simple.core.training import Trainer
 from alphazero_simple.config import AlphaZeroConfig
 from alphazero_simple.connect4_game import Connect4Game
@@ -15,6 +19,19 @@ def main(config: AlphaZeroConfig):
     trainer.learn()
 
 
+def profile_train(config: AlphaZeroConfig):
+    print("Profiling activated")
+    profiler = cProfile.Profile()
+    profiler.enable()
+
+    main(config)
+
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats("cumulative")
+    stats.print_stats(20)  # Print top 20 time-consuming functions
+    stats.dump_stats("train_profile.prof")  # Save profile results to a file
+
+
 if __name__ == "__main__":
     config = AlphaZeroConfig(
         batch_size=64,
@@ -27,4 +44,12 @@ if __name__ == "__main__":
         mem_buffer_size=int(5e5),
         background_generation=False,
     )
+
+    parser = argparse.ArgumentParser(description="Train the AlphaZero model")
+    parser.add_argument("--profile", action="store_true", help="Enable profiling")
+    args = parser.parse_args()
+
+    if args.profile:
+        profile_train(config)
+    else:
     main(config)
