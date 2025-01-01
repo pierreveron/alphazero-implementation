@@ -69,13 +69,7 @@ class Connect4Game(BaseGame):
 
     def get_valid_moves(self, board: np.ndarray) -> list[int]:
         """Returns a binary vector of valid moves (columns that aren't full)"""
-        valid_moves = [0] * self.get_action_size()
-
-        for col in range(self.columns):
-            if board[0][col] == 0:  # If top cell is empty, move is valid
-                valid_moves[col] = 1
-
-        return valid_moves
+        return (board[0] == 0).astype(int).tolist()
 
     def is_win(self, board: np.ndarray, player: int) -> bool:
         """Checks for 4 in a row using convolution"""
