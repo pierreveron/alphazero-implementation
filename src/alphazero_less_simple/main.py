@@ -23,7 +23,7 @@ if __name__ == "__main__":
         num_episodes=5000,
         num_parallel_episodes=100,
         num_iters_for_train_history=1,
-        epochs=10,
+        epochs=1,
         mem_buffer_size=int(5e5),
         background_generation=False,
     )
