@@ -61,7 +61,7 @@ class Trainer:
         # Create checkpoint callback
         checkpoint_callback = ModelCheckpoint(
             # filename="{epoch}-{train_loss:.2f}",
-            every_n_epochs=self.config.epochs,
+            every_n_epochs=1,
             save_top_k=-1,  # Keep all checkpoints
         )
 
