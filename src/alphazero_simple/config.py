@@ -9,6 +9,7 @@ class AlphaZeroConfig:
         int  # Total number of MCTS simulations to run when deciding on a move to play
     )
     num_episodes: int  # Number of full games (episodes) to run during each iteration
+    num_parallel_episodes: int
     num_iters_for_train_history: (
         int  # Number of iterations to store for training history
     )

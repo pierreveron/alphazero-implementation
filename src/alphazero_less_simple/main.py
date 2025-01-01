@@ -1,5 +1,3 @@
-import torch.multiprocessing as mp
-
 from alphazero_less_simple.core.training import Trainer
 from alphazero_simple.config import AlphaZeroConfig
 from alphazero_simple.connect4_game import Connect4Game
@@ -18,16 +16,12 @@ def main(config: AlphaZeroConfig):
 
 
 if __name__ == "__main__":
-    # Set multiprocessing start method to 'spawn' for better cross-platform compatibility
-    # 'spawn' creates a new Python interpreter process, which is more reliable than 'fork'
-    # This is especially important for PyTorch multiprocessing on different operating systems
-    mp.set_start_method("spawn")
-
     config = AlphaZeroConfig(
         batch_size=64,
         num_iterations=20,
         num_simulations=600,
         num_episodes=5000,
+        num_parallel_episodes=100,
         num_iters_for_train_history=1,
         epochs=10,
         mem_buffer_size=int(5e5),
