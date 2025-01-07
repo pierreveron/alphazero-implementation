@@ -77,6 +77,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--run-dir",
         type=Path,
+        default=None,
         help="Path to a previous run directory to resume from (e.g. lightning_logs/alphazero_less_simple/run_XXX...)",
     )
     args = parser.parse_args()
@@ -84,7 +85,4 @@ if __name__ == "__main__":
     if args.profile:
         profile_train(config)
     else:
-        run_dir = Path(
-            "/Users/pveron/Code/alphazero-implementation/src/alphazero_less_simple/lightning_logs/alphazero_less_simple/run_009_ResNet_iter20_episodes500_sims600"
-        )
-        main(config, run_dir=run_dir)
+        main(config, run_dir=args.run_dir)
