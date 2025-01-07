@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 import lightning as L
@@ -79,6 +80,9 @@ class Trainer:
             callbacks=[checkpoint_callback],
         )
 
+        # Time the training
+        start_time = time.time()
+
         # Train the model
         trainer.fit(
             self.model,
@@ -86,4 +90,5 @@ class Trainer:
             ckpt_path=checkpoint_path,
         )
 
-        print("Training completed!")
+        training_time = time.time() - start_time
+        print(f"Training completed in {training_time:.2f} seconds!")
