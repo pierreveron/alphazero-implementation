@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -33,6 +34,8 @@ class Trainer:
 
     def learn(
         self,
+        checkpoint_path: Path | None = None,
+        samples_dir: Path | None = None,
     ):
         # Create a consistent run name
         run_counter = self._get_next_run_number()
@@ -55,7 +58,8 @@ class Trainer:
             model=self.model,
             episode_generator=episode_generator,
             config=self.config,
-            save_dir=f"lightning_logs/alphazero_less_simple/{run_name}/episodes",
+            save_dir=f"lightning_logs/alphazero_less_simple/{run_name}/samples",
+            initial_samples_dir=samples_dir,
         )
 
         # Create checkpoint callback
@@ -76,6 +80,10 @@ class Trainer:
         )
 
         # Train the model
-        trainer.fit(self.model, datamodule=datamodule)
+        trainer.fit(
+            self.model,
+            datamodule=datamodule,
+            ckpt_path=checkpoint_path,
+        )
 
         print("Training completed!")
