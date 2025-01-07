@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import convolve2d
 
 from .base_game import BaseGame
 
@@ -15,28 +16,12 @@ class Connect4Game(BaseGame):
         self.rows = 6
         self.columns = 7
         self.win_length = 4
-        # Pre-compute all possible win pattern directions
-        self.directions = [
-            (0, 1),  # horizontal
-            (1, 0),  # vertical
-            (1, 1),  # diagonal positive
-            (1, -1),  # diagonal negative
+        self.win_kernels = [
+            np.ones((1, self.win_length)),  # horizontal
+            np.ones((self.win_length, 1)),  # vertical
+            np.eye(self.win_length),  # diagonal positive
+            np.fliplr(np.eye(self.win_length)),  # diagonal negative
         ]
-        # Create convolution kernels for each direction
-        self._init_win_kernels()
-
-    def _init_win_kernels(self):
-        """Initialize convolution kernels for win checking"""
-        self.win_kernels = []
-        for dr, dc in self.directions:
-            kernel = np.zeros(
-                (self.win_length * abs(dr) or 1, self.win_length * abs(dc) or 1)
-            )
-            for i in range(self.win_length):
-                r = i * dr if dr else 0
-                c = i * dc if dc else 0
-                kernel[r, c] = 1
-            self.win_kernels.append(kernel)
 
     def get_init_board(self) -> np.ndarray:
         return np.zeros((self.rows, self.columns), dtype=int)
@@ -72,16 +57,17 @@ class Connect4Game(BaseGame):
         return (board[0] == 0).astype(int).tolist()
 
     def is_win(self, board: np.ndarray, player: int) -> bool:
-        """Checks for 4 in a row using convolution"""
+        """Checks for 4 in a row using 2D convolution"""
         # Create player-specific board
         player_board = (board == player).astype(np.int8)
 
-        # Check each direction using convolution
+        # Check each direction using 2D convolution
         for kernel in self.win_kernels:
-            # Convolve the board with the kernel
-            conv = np.correlate(player_board.ravel(), kernel.ravel(), mode="valid")
-            if (conv >= self.win_length).any():
+            # Use valid mode to avoid edge effects
+            conv = convolve2d(player_board, kernel, mode="valid")
+            if (conv == self.win_length).any():
                 return True
+
         return False
 
     def get_reward_for_player(self, board: np.ndarray, player: int) -> float | None:
