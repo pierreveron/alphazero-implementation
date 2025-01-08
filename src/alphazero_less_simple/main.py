@@ -62,9 +62,9 @@ def profile_train(config: AlphaZeroConfig):
 if __name__ == "__main__":
     config = AlphaZeroConfig(
         batch_size=64,
-        num_iterations=20,
+        num_iterations=25,
         num_simulations=600,
-        num_episodes=5000,
+        num_episodes=500,
         num_parallel_episodes=100,
         num_iters_for_train_history=1,
         epochs=1,
