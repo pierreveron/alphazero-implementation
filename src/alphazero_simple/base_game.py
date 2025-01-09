@@ -51,8 +51,11 @@ class BaseGame(ABC):
         """
         Returns:
             None if game has not ended
+
             1 if player won
+
             -1 if player lost
+
             0 if game ended in draw
         """
         pass

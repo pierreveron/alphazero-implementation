@@ -1,4 +1,6 @@
 import os
+import time
+from pathlib import Path
 
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -33,6 +35,8 @@ class Trainer:
 
     def learn(
         self,
+        checkpoint_path: Path | None = None,
+        samples_dir: Path | None = None,
     ):
         # Create a consistent run name
         run_counter = self._get_next_run_number()
@@ -55,14 +59,14 @@ class Trainer:
             model=self.model,
             episode_generator=episode_generator,
             config=self.config,
-            save_dir=f"lightning_logs/alphazero_less_simple/{run_name}/episodes",
+            save_dir=f"lightning_logs/alphazero_less_simple/{run_name}/samples",
+            initial_samples_dir=samples_dir,
         )
 
         # Create checkpoint callback
         checkpoint_callback = ModelCheckpoint(
             # filename="{epoch}-{train_loss:.2f}",
-            every_n_epochs=self.config.epochs
-            * int(self.config.num_iters_for_train_history / 2),
+            every_n_epochs=self.config.epochs,
             save_top_k=-1,  # Keep all checkpoints
         )
 
@@ -72,11 +76,19 @@ class Trainer:
             log_every_n_steps=50,
             enable_progress_bar=True,
             logger=logger,
-            reload_dataloaders_every_n_epochs=self.config.epochs,
+            reload_dataloaders_every_n_epochs=1,
             callbacks=[checkpoint_callback],
         )
 
-        # Train the model
-        trainer.fit(self.model, datamodule=datamodule)
+        # Time the training
+        start_time = time.time()
 
-        print("Training completed!")
+        # Train the model
+        trainer.fit(
+            self.model,
+            datamodule=datamodule,
+            ckpt_path=checkpoint_path,
+        )
+
+        training_time = time.time() - start_time
+        print(f"Training completed in {training_time:.2f} seconds!")

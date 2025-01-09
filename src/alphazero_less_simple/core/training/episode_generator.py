@@ -1,6 +1,9 @@
+import time
+from functools import wraps
 from typing import Generator
 
 import numpy as np
+from tqdm import tqdm
 
 from alphazero_simple.base_game import BaseGame
 from alphazero_simple.base_model import BaseModel
@@ -8,6 +11,31 @@ from alphazero_simple.config import AlphaZeroConfig
 from alphazero_simple.monte_carlo_tree_search import MCTS
 
 from .episode import Episode, Sample
+
+
+def with_progress_bar(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        generator = func(self, *args, **kwargs)
+        start_time = time.time()
+        progress_bar = tqdm(
+            total=self.config.num_episodes, desc="Generating episodes", unit="episode"
+        )
+
+        try:
+            for item in generator:
+                yield item
+                progress_bar.update(1)
+
+                # Update progress bar description with elapsed time
+                elapsed = time.time() - start_time
+                progress_bar.set_description(
+                    f"Generating episodes (elapsed: {elapsed:.1f}s)"
+                )
+        finally:
+            progress_bar.close()
+
+    return wrapper
 
 
 class EpisodeGenerator:
@@ -20,14 +48,18 @@ class EpisodeGenerator:
         self.game = game
         self.config = config
 
+    @with_progress_bar
     def generate_episodes(self, model: BaseModel) -> Generator[Episode, None, None]:
         mcts = MCTS(self.game, model, self.config.num_simulations)
-        states = [self.game.get_init_board() for _ in range(self.config.num_episodes)]
-        current_players = [1] * self.config.num_episodes
-        train_examples_list = [[] for _ in range(self.config.num_episodes)]
+        states = [
+            self.game.get_init_board() for _ in range(self.config.num_parallel_episodes)
+        ]
+        current_players = [1] * self.config.num_parallel_episodes
+        train_examples_list = [[] for _ in range(self.config.num_parallel_episodes)]
 
         episode_count = 0
-        while True:
+
+        while episode_count < self.config.num_episodes:
             canonical_boards = [
                 self.game.get_canonical_board(state, current_player)
                 for state, current_player in zip(states, current_players)
@@ -40,7 +72,7 @@ class EpisodeGenerator:
                 states,
                 current_players,
                 canonical_boards,
-                range(self.config.num_episodes),
+                range(self.config.num_parallel_episodes),
             ):
                 action_probs = [0 for _ in range(self.game.get_action_size())]
                 for k, v in root.children.items():
@@ -82,6 +114,3 @@ class EpisodeGenerator:
                     train_examples_list[i] = []
 
                     episode_count += 1
-
-                    if episode_count >= self.config.num_episodes:
-                        return

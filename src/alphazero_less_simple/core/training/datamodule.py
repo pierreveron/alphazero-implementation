@@ -1,4 +1,5 @@
 import copy
+import glob
 import json
 import threading
 import time
@@ -12,13 +13,13 @@ from torch.utils.data import DataLoader
 from alphazero_simple.base_model import BaseModel
 from alphazero_simple.config import AlphaZeroConfig
 
-from .episode import Episode, Sample
+from .episode import Sample
 from .episode_generator import EpisodeGenerator
 
 
 class EpisodeGeneratorThread(threading.Thread):
     def __init__(
-        self, generator: EpisodeGenerator, buffer: deque[Episode], model: BaseModel
+        self, generator: EpisodeGenerator, buffer: deque[Sample], model: BaseModel
     ):
         super().__init__(daemon=True)
         self.generator = generator
@@ -39,7 +40,7 @@ class EpisodeGeneratorThread(threading.Thread):
             if self.stop_event.is_set():
                 break
             with self.lock:
-                self.buffer.append(episode)
+                self.buffer.extend(episode.samples)
         print(f"Generated new episodes in {time.time() - start_time:.2f} seconds")
 
     def stop(self):
@@ -55,6 +56,7 @@ class DataModule(L.LightningDataModule):
         shuffle: bool = True,
         num_workers: int = 7,
         save_dir: str | Path | None = None,
+        initial_samples_dir: Path | None = None,
     ):
         super().__init__()
         self.model = model
@@ -64,9 +66,19 @@ class DataModule(L.LightningDataModule):
         self.shuffle = shuffle
         self.num_workers = num_workers
 
-        self.buffer: deque[Episode] = deque(
-            maxlen=self.config.num_iters_for_train_history * self.config.num_episodes
-        )
+        self.buffer: deque[Sample] = deque(maxlen=self.config.mem_buffer_size)
+
+        # Load initial episodes if provided
+        if initial_samples_dir is not None and initial_samples_dir.exists():
+            sample_files = sorted(
+                glob.glob(str(initial_samples_dir / "samples_iter*.json"))
+            )
+            for sample_file in sample_files:
+                samples = self._load_samples(Path(sample_file))
+                self.buffer.extend(samples)
+            print(
+                f"Loaded {len(self.buffer)} samples from {len(sample_files)} sample files"
+            )
 
         self.episode_generator_thread = (
             EpisodeGeneratorThread(self.episode_generator, self.buffer, self.model)
@@ -84,23 +96,24 @@ class DataModule(L.LightningDataModule):
         if stage == "fit" and self.episode_generator_thread:
             self.episode_generator_thread.start()
 
-    def _save_episodes(self):
-        """Save current episodes in buffer to disk."""
-        save_path = self.save_dir / f"episodes_iter{self.current_iteration}.json"
+    def _save_samples(self):
+        """Save current samples in buffer to disk."""
+        save_path = self.save_dir / f"samples_iter{self.current_iteration}.json"
 
-        episodes_data = [episode.to_dict() for episode in self.buffer]
+        # Convert samples to episodes for saving
+        samples_data = [sample.to_dict() for sample in self.buffer]
 
         with open(save_path, "w") as f:
-            json.dump(episodes_data, f)
+            json.dump(samples_data, f)
 
-        print(f"Saved {len(self.buffer)} episodes to {save_path}")
+        print(f"Saved {len(self.buffer)} samples to {save_path}")
 
-    def _load_episodes(self, path: Path) -> list[Episode]:
-        """Load episodes from JSON file"""
+    def _load_samples(self, path: Path) -> list[Sample]:
+        """Load samples from JSON file"""
         with open(path, "r") as f:
-            episodes_data = json.load(f)
+            samples_data = json.load(f)
 
-        return [Episode.from_dict(episode_data) for episode_data in episodes_data]
+        return [Sample.from_dict(sample_data) for sample_data in samples_data]
 
     def train_dataloader(
         self,
@@ -117,7 +130,9 @@ class DataModule(L.LightningDataModule):
             self.episode_generator_thread.start()
         else:
             new_episodes = self.episode_generator.generate_episodes(self.model)
-            self.buffer.extend(new_episodes)
+            self.buffer.extend(
+                [sample for episode in new_episodes for sample in episode.samples]
+            )
 
         waited_time = time.time() - start_time
 
@@ -128,12 +143,10 @@ class DataModule(L.LightningDataModule):
         # Save the new episodes
         self.current_iteration += 1
         if self.current_iteration % self.config.num_iters_for_train_history == 0:
-            self._save_episodes()
+            self._save_samples()
 
         # Use all episodes in the buffer for training
-        all_samples: list[Sample] = []
-        for episode in self.buffer:
-            all_samples.extend(episode.samples)
+        all_samples: list[Sample] = list(self.buffer)
 
         boards = [sample.state for sample in all_samples]
         policies = [sample.policy for sample in all_samples]

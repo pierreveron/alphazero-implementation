@@ -100,10 +100,39 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, game: BaseGame, model: BaseModel, num_simulations: int):
+    def __init__(
+        self,
+        game: BaseGame,
+        model: BaseModel | None,
+        num_simulations: int = 800,
+    ):
         self.game = game
         self.model = model
         self.num_simulations = num_simulations
+
+    def rollout(self, state: np.ndarray, to_play: int) -> float:
+        """Perform a random rollout from the given state until game end."""
+        current_state = state.copy()
+        current_player = to_play
+
+        while True:
+            # Check if game is finished
+            value = self.game.get_reward_for_player(current_state, player=1)
+            if value is not None:
+                # Return value from perspective of to_play
+                return value * (1 if to_play == 1 else -1)
+
+            # Get valid moves and choose randomly
+            valid_moves = self.game.get_valid_moves(current_state)
+            valid_actions = np.where(valid_moves)[0]
+            action = np.random.choice(valid_actions)
+
+            # Make move and switch player
+            current_state, current_player = self.game.get_next_state(
+                current_state, current_player, action
+            )
+            # Always get canonical board from perspective of next player
+            current_state = self.game.get_canonical_board(current_state, current_player)
 
     def run(self, state: np.ndarray, to_play: int) -> Node:
         return self.run_batch([state], [to_play])[0]
@@ -174,10 +203,16 @@ class MCTS:
         root = Node(0, to_play)
 
         # EXPAND root
-        [action_probs], _ = self.model.predict([state])
-        valid_moves = self.game.get_valid_moves(state)
-        action_probs = action_probs * valid_moves  # mask invalid moves
-        action_probs /= np.sum(action_probs)
+        if self.model:
+            [action_probs], _ = self.model.predict([state])
+            valid_moves = self.game.get_valid_moves(state)
+            action_probs = action_probs * valid_moves  # mask invalid moves
+            action_probs /= np.sum(action_probs)
+        else:
+            # For rollouts, use uniform prior probabilities
+            valid_moves = self.game.get_valid_moves(state)
+            action_probs = valid_moves / np.sum(valid_moves)
+
         root.expand(state, to_play, action_probs)
 
         for _ in range(self.num_simulations):
@@ -201,10 +236,19 @@ class MCTS:
             if value is None:
                 # If the game has not ended:
                 # EXPAND
-                [action_probs], [value] = self.model.predict([next_state])
-                valid_moves = self.game.get_valid_moves(next_state)
-                action_probs = action_probs * valid_moves  # mask invalid moves
-                action_probs /= np.sum(action_probs)
+                if self.model:
+                    # Use neural network evaluation
+                    [action_probs], [value] = self.model.predict([next_state])
+                    valid_moves = self.game.get_valid_moves(next_state)
+                    action_probs = action_probs * valid_moves  # mask invalid moves
+                    action_probs /= np.sum(action_probs)
+                else:
+                    # Perform rollout to get value
+                    value = self.rollout(next_state, parent.to_play * -1)
+                    # For rollouts, use uniform prior probabilities for expansion
+                    valid_moves = self.game.get_valid_moves(next_state)
+                    action_probs = valid_moves / np.sum(valid_moves)
+
                 node.expand(next_state, parent.to_play * -1, action_probs)
 
             self.backpropagate(node, value, parent.to_play * -1)
